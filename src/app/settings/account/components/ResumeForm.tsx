@@ -28,7 +28,6 @@ const resumeContactInfoSchema = z.object({
   phone: z.string().min(1, 'Phone number is required').max(50, "Phone number is too long."),
   location: z.string().min(1, 'Location is required').max(100, "Location cannot exceed 100 characters."),
   summary: z.string().max(1000, 'Summary is too long (max 1000 characters).').optional(),
-  // profileImageUrl: z.string().url("Must be a valid URL").optional().or(z.literal('')),
 });
 
 const resumeSocialsSchema = z.object({
@@ -116,7 +115,6 @@ const getSanitizedDefaultValues = (resume?: ResumeData | null): ResumeFormValues
             phone: resume?.contactInfo?.phone || '',
             location: resume?.contactInfo?.location || '',
             summary: resume?.contactInfo?.summary || '',
-            // profileImageUrl: resume?.contactInfo?.profileImageUrl || '',
         },
         socials: {
             linkedin: resume?.socials?.linkedin || '',
@@ -164,108 +162,12 @@ const getSanitizedDefaultValues = (resume?: ResumeData | null): ResumeFormValues
     };
 };
 
-/*
-function ProfileImageEditor() {
-  const { control, watch, setValue } = useFormContext<ResumeFormValues>();
-  const [isEditing, setIsEditing] = useState(false);
-  const currentImageUrl = watch('contactInfo.profileImageUrl');
-  const [tempUrl, setTempUrl] = useState(currentImageUrl || '');
-  const [displayUrl, setDisplayUrl] = useState(currentImageUrl || '');
-
-  const handleSave = () => {
-    setValue('contactInfo.profileImageUrl', tempUrl, { shouldValidate: true, shouldDirty: true });
-    setDisplayUrl(tempUrl);
-    setIsEditing(false);
-  };
-
-  const handleCancel = () => {
-    setTempUrl(displayUrl);
-    setIsEditing(false);
-  };
-  
-  const handleRemove = () => {
-    setValue('contactInfo.profileImageUrl', '', { shouldValidate: true, shouldDirty: true });
-    setDisplayUrl('');
-    setTempUrl('');
-    setIsEditing(false);
-  }
-
-  const convertGoogleDriveUrl = (url: string): string => {
-      if (typeof url !== 'string' || !url) return '';
-      if (url.includes('drive.google.com/file/d/')) {
-        const fileIdMatch = url.match(/file\/d\/([a-zA-Z0-9_-]+)/);
-        if (fileIdMatch && fileIdMatch[1]) {
-          return `https://drive.google.com/uc?export=view&id=${fileIdMatch[1]}`;
-        }
-      }
-      return url;
-  };
-  
-  const finalDisplayUrl = convertGoogleDriveUrl(displayUrl);
-
-  return (
-    <div className="space-y-2">
-      <FormLabel>Profile Picture</FormLabel>
-      <div className="relative h-32 w-32 rounded-full overflow-hidden border-2 border-dashed flex items-center justify-center bg-muted/30">
-        {finalDisplayUrl ? (
-          <Image
-            src={finalDisplayUrl}
-            alt="Profile Preview"
-            fill
-            className="object-cover"
-            onError={(e) => { e.currentTarget.src = 'https://placehold.co/128x128.png'; }}
-          />
-        ) : (
-          <div className="text-center text-muted-foreground p-2">
-            <ImageIcon className="mx-auto h-8 w-8" />
-            <p className="text-xs mt-1">No Image</p>
-          </div>
-        )}
-         <div className="absolute inset-0 bg-black/30 opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center">
-            <Button
-              type="button"
-              variant="secondary"
-              size="sm"
-              onClick={() => {
-                setTempUrl(displayUrl);
-                setIsEditing(true);
-              }}
-            >
-              <Pencil className="mr-2 h-4 w-4" /> Edit
-            </Button>
-        </div>
-      </div>
-      {isEditing && (
-        <div className="mt-2 space-y-2 p-3 border rounded-md max-w-sm">
-          <Input
-            value={tempUrl}
-            onChange={(e) => setTempUrl(e.target.value)}
-            placeholder="https://example.com/your-photo.jpg"
-          />
-          <div className="flex justify-end gap-2">
-            <Button type="button" variant="destructive" size="sm" onClick={handleRemove}>Remove</Button>
-            <Button type="button" variant="outline" size="sm" onClick={handleCancel}>Cancel</Button>
-            <Button type="button" size="sm" onClick={handleSave}>Save</Button>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-*/
-
-
-function ImageGallery<TFieldValues extends ResumeFormValues>({
-  namePrefix,
-}: {
-  namePrefix: `projects.${number}.imageUrls` | `certificates.${number}.imageUrls`;
-}) {
-  const { control } = useFormContext<TFieldValues>();
+function ProjectImageGallery({ control, projectIndex }: { control: any, projectIndex: number }) {
   const { fields, append, remove, update } = useFieldArray({
     control,
-    name: namePrefix,
+    name: `projects.${projectIndex}.imageUrls` as const,
   });
-
+  
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [inputValue, setInputValue] = useState('');
   const [enlargedImageUrl, setEnlargedImageUrl] = useState<string | null>(null);
@@ -275,7 +177,7 @@ function ImageGallery<TFieldValues extends ResumeFormValues>({
       alert("You can add a maximum of 5 images.");
       return;
     }
-    append({ value: '' } as any);
+    append({ value: '' });
     setEditingIndex(fields.length);
     setInputValue('');
   };
@@ -287,7 +189,7 @@ function ImageGallery<TFieldValues extends ResumeFormValues>({
   };
 
   const handleSave = (index: number) => {
-    update(index, { value: inputValue } as any);
+    update(index, { value: inputValue });
     setEditingIndex(null);
     setInputValue('');
   };
@@ -381,6 +283,126 @@ function ImageGallery<TFieldValues extends ResumeFormValues>({
   );
 }
 
+function CertificateImageGallery({ control, certIndex }: { control: any, certIndex: number }) {
+  const { fields, append, remove, update } = useFieldArray({
+    control,
+    name: `certificates.${certIndex}.imageUrls` as const,
+  });
+
+  const [editingIndex, setEditingIndex] = useState<number | null>(null);
+  const [inputValue, setInputValue] = useState('');
+  const [enlargedImageUrl, setEnlargedImageUrl] = useState<string | null>(null);
+
+  const handleAdd = () => {
+    if (fields.length >= 5) {
+      alert("You can add a maximum of 5 images.");
+      return;
+    }
+    append({ value: '' });
+    setEditingIndex(fields.length);
+    setInputValue('');
+  };
+
+  const handleEdit = (index: number) => {
+    setEditingIndex(index);
+    const fieldObject = fields[index];
+    setInputValue(fieldObject.value || '');
+  };
+
+  const handleSave = (index: number) => {
+    update(index, { value: inputValue });
+    setEditingIndex(null);
+    setInputValue('');
+  };
+  
+  const handleCancel = (index: number) => {
+    const fieldObject = fields[index];
+    if (fieldObject.value === '') {
+        remove(index);
+    }
+    setEditingIndex(null);
+    setInputValue('');
+  };
+  
+  const convertGoogleDriveUrl = (url: string): string => {
+      if (typeof url !== 'string' || !url) return '';
+      if (url.includes('drive.google.com/file/d/')) {
+        const fileIdMatch = url.match(/file\/d\/([a-zA-Z0-9_-]+)/);
+        if (fileIdMatch && fileIdMatch[1]) {
+          return `https://drive.google.com/uc?export=view&id=${fileIdMatch[1]}`;
+        }
+      }
+      return url;
+  };
+
+  return (
+    <>
+      <div className="space-y-3">
+        <FormLabel>Images (up to 5)</FormLabel>
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+          {fields.map((field, index) => {
+            const imageUrl = field.value;
+            const displayUrl = convertGoogleDriveUrl(imageUrl);
+            return (
+              <div key={field.id} className="relative aspect-video group">
+                {editingIndex === index ? (
+                  <div className="w-full h-full flex flex-col items-center justify-center p-2 border-2 border-primary rounded-md bg-muted/50">
+                    <Input
+                      value={inputValue}
+                      onChange={(e) => setInputValue(e.target.value)}
+                      placeholder="Paste image URL"
+                      className="h-8 text-xs mb-2 focus-visible:ring-0 focus-visible:ring-offset-0"
+                    />
+                    <div className="flex gap-1.5">
+                      <Button type="button" size="icon" className="h-6 w-6" onClick={() => handleSave(index)}><Save className="h-3.5 w-3.5" /></Button>
+                      <Button type="button" variant="ghost" size="icon" className="h-6 w-6 hover:bg-transparent text-muted-foreground hover:text-muted-foreground" onClick={() => handleCancel(index)}><Ban className="h-3.5 w-3.5" /></Button>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <Image
+                      src={displayUrl || 'https://placehold.co/400x300.png'}
+                      alt={`Image ${index + 1}`}
+                      width={400}
+                      height={300}
+                      className="w-full h-full object-cover rounded-md border cursor-pointer"
+                      onClick={() => setEnlargedImageUrl(displayUrl)}
+                      onError={(e) => { e.currentTarget.src = 'https://placehold.co/400x300.png'; }}
+                    />
+                    <div className="absolute top-1 right-1 flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <Button type="button" size="icon" className="h-6 w-6 bg-black/60 hover:bg-black/80" onClick={() => handleEdit(index)}><Pencil className="h-3.5 w-3.5 text-white" /></Button>
+                      <Button type="button" variant="destructive" size="icon" className="h-6 w-6 bg-destructive/80 hover:bg-destructive" onClick={() => remove(index)}><Trash2 className="h-3.5 w-3.5 text-white" /></Button>
+                    </div>
+                  </>
+                )}
+              </div>
+            )
+          })}
+          {fields.length < 5 && (
+            <Button type="button" variant="outline" className="h-full aspect-video w-full border-2 border-solid flex flex-col items-center justify-center hover:bg-muted/30" onClick={handleAdd}>
+              <ImageIcon className="h-6 w-6 text-muted-foreground" />
+              <span className="text-xs mt-1 text-muted-foreground">Add Image</span>
+            </Button>
+          )}
+        </div>
+      </div>
+      {enlargedImageUrl && (
+        <div
+          className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 cursor-default"
+          onClick={() => setEnlargedImageUrl(null)}
+        >
+          <Image
+            src={enlargedImageUrl}
+            alt="Enlarged view"
+            width={1200}
+            height={800}
+            className="max-w-[90vw] max-h-[90vh] object-contain rounded-lg shadow-2xl cursor-pointer"
+          />
+        </div>
+      )}
+    </>
+  );
+}
 
 
 export function ResumeForm({ initialData, onSave, isLoading, showSkeleton }: ResumeFormProps) {
@@ -495,7 +517,6 @@ export function ResumeForm({ initialData, onSave, isLoading, showSkeleton }: Res
             <section>
               <h3 className="text-lg font-semibold mb-3">Contact Information</h3>
               <div className="space-y-4">
-                 {/* <ProfileImageEditor /> */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <FormField control={form.control} name="contactInfo.name" render={({ field }) => ( <FormItem><FormLabel>Full Name</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem> )} />
                   <FormField control={form.control} name="contactInfo.email" render={({ field }) => ( <FormItem><FormLabel>Email</FormLabel><FormControl><Input type="email" {...field} /></FormControl><FormMessage /></FormItem> )} />
@@ -659,7 +680,7 @@ export function ResumeForm({ initialData, onSave, isLoading, showSkeleton }: Res
                       </div>
                       <FormControl><Input placeholder="Type skill and press Enter" onKeyDown={(e) => handleSkillKeyDown(e, `projects.${index}.skillsUsed`, index)} /></FormControl>
                     </FormItem>
-                    <ImageGallery namePrefix={`projects.${index}.imageUrls`} />
+                    <ProjectImageGallery control={form.control} projectIndex={index} />
                   </div>
                 ))}
                 <Button type="button" variant="outline" onClick={() => appendProj({ id: crypto.randomUUID(), title: '', url: '', skillsUsed: [], imageUrls: [] })}><PlusCircle className="mr-2"/> Add Project</Button>
@@ -678,7 +699,7 @@ export function ResumeForm({ initialData, onSave, isLoading, showSkeleton }: Res
                     <FormField control={form.control} name={`certificates.${index}.title`} render={({ field }) => ( <FormItem><FormLabel>Title</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem> )} />
                     <FormField control={form.control} name={`certificates.${index}.description`} render={({ field }) => ( <FormItem><FormLabel>Description (Optional)</FormLabel><FormControl><Textarea {...field} rows={2} /></FormControl><FormMessage /></FormItem> )} />
                     <FormField control={form.control} name={`certificates.${index}.date`} render={({ field }) => ( <FormItem><FormLabel>Date Awarded</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button variant="outline" className={cn("w-full text-left font-normal", !field.value && "text-muted-foreground")}><CalendarIcon className="mr-2 h-4 w-4" />{field.value ? format(field.value, 'PPP') : <span>Pick a date</span>}</Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0"><Calendar mode="single" selected={field.value} onSelect={field.onChange} /></PopoverContent></Popover><FormMessage /></FormItem> )} />
-                    <ImageGallery namePrefix={`certificates.${index}.imageUrls`} />
+                    <CertificateImageGallery control={form.control} certIndex={index} />
                   </div>
                 ))}
                 <Button type="button" variant="outline" onClick={() => appendCert({ id: crypto.randomUUID(), title: '', description: '', imageUrls: [] })}><PlusCircle className="mr-2"/> Add Certificate/Achievement</Button>
