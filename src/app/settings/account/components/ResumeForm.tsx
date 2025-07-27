@@ -2,7 +2,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { useForm, useFieldArray, Controller, useFormContext, FieldArrayPath } from 'react-hook-form';
+import { useForm, useFieldArray, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -14,15 +14,14 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
-import { CalendarIcon, FileText, Loader2, PlusCircle, Trash2, X, Linkedin, Instagram, Twitter, Image as ImageIcon, Pencil, Save, Ban, Link2 } from 'lucide-react';
+import { CalendarIcon, FileText, Loader2, PlusCircle, Trash2, X, Linkedin, Instagram, Twitter, Link2 } from 'lucide-react';
 import { format, parseISO, isValid } from 'date-fns';
 import type { ResumeData, UserSettings } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
-import Image from 'next/image';
+import { ImageGallery } from './ImageGallery'; // Import the new component
 
-const urlFieldSchema = z.object({ value: z.string().url("Must be a valid URL").max(2048, "URL is too long.").or(z.literal('')) });
-type UrlFieldType = z.infer<typeof urlFieldSchema>;
+const urlFieldSchema = z.string().url("Must be a valid URL").max(2048, "URL is too long.").or(z.literal(''));
 
 // Zod Schemas for Resume sections
 const resumeContactInfoSchema = z.object({
@@ -69,7 +68,7 @@ const resumeProjectSchema = z.object({
   url: z.string().url("Must be a valid URL").optional().or(z.literal('')),
   endDate: z.date().optional(),
   skillsUsed: z.array(z.string().max(50, "Skill cannot exceed 50 characters.")).optional(),
-  imageUrls: z.array(urlFieldSchema).max(5, "You can add up to 5 images.").optional(),
+  imageUrls: z.array(z.string().url("Must be a valid URL").or(z.literal(''))).max(5, "You can add up to 5 images.").optional(),
 });
 
 const resumeCertificateSchema = z.object({
@@ -77,7 +76,7 @@ const resumeCertificateSchema = z.object({
   title: z.string().min(1, 'Title is required').max(150, "Title cannot exceed 150 characters."),
   description: z.string().max(1000, "Description is too long.").optional(),
   date: z.date().optional(),
-  imageUrls: z.array(urlFieldSchema).max(5, "You can add up to 5 images.").optional(),
+  imageUrls: z.array(z.string().url("Must be a valid URL").or(z.literal(''))).max(5, "You can add up to 5 images.").optional(),
 });
 
 export const resumeSchema = z.object({
@@ -123,7 +122,7 @@ const getSanitizedDefaultValues = (resume?: ResumeData | null): ResumeFormValues
             linkedin: resume?.socials?.linkedin || '',
             instagram: resume?.socials?.instagram || '',
             twitter: resume?.socials?.twitter || '',
-            otherLinks: resume?.socials?.otherLinks?.map(link => ({ value: link || '' })) || [],
+            otherLinks: resume?.socials?.otherLinks || [],
         },
         experiences: (resume?.experiences || []).map(exp => ({
             id: exp.id || crypto.randomUUID(),
@@ -153,260 +152,17 @@ const getSanitizedDefaultValues = (resume?: ResumeData | null): ResumeFormValues
             url: proj.url || '',
             endDate: safeParseDate(proj.endDate),
             skillsUsed: proj.skillsUsed || [],
-            imageUrls: (proj.imageUrls || []).map(url => ({ value: url || '' })),
+            imageUrls: (proj.imageUrls || []),
         })),
         certificates: (resume?.certificates || []).map(cert => ({
             id: cert.id || crypto.randomUUID(),
             title: cert.title || '',
             description: cert.description || '',
             date: safeParseDate(cert.date),
-            imageUrls: (cert.imageUrls || []).map(url => ({ value: url || '' })),
+            imageUrls: (cert.imageUrls || []),
         })),
     };
 };
-
-function ProjectImageGallery({ control, projectIndex }: { control: any, projectIndex: number }) {
-  const { fields, append, remove, update } = useFieldArray({
-    control,
-    name: `projects.${projectIndex}.imageUrls` as 'projects.0.imageUrls',
-  });
-  
-  const [editingIndex, setEditingIndex] = useState<number | null>(null);
-  const [inputValue, setInputValue] = useState('');
-  const [enlargedImageUrl, setEnlargedImageUrl] = useState<string | null>(null);
-
-  const handleAdd = () => {
-    if (fields.length >= 5) {
-      alert("You can add a maximum of 5 images.");
-      return;
-    }
-    append({ value: '' });
-    setEditingIndex(fields.length);
-    setInputValue('');
-  };
-
-  const handleEdit = (index: number) => {
-    setEditingIndex(index);
-    const fieldObject = fields[index] as { value: string };
-    setInputValue(fieldObject.value);
-  };
-
-  const handleSave = (index: number) => {
-    update(index, { value: inputValue });
-    setEditingIndex(null);
-    setInputValue('');
-  };
-
-  const handleCancel = (index: number) => {
-    const fieldObject = fields[index] as { value: string };
-    if (fieldObject.value === '') {
-        remove(index);
-    }
-    setEditingIndex(null);
-    setInputValue('');
-  };
-  
-  const convertGoogleDriveUrl = (url: string): string => {
-      if (typeof url !== 'string' || !url) return '';
-      if (url.includes('drive.google.com/file/d/')) {
-        const fileIdMatch = url.match(/file\/d\/([a-zA-Z0-9_-]+)/);
-        if (fileIdMatch && fileIdMatch[1]) {
-          return `https://drive.google.com/uc?export=view&id=${fileIdMatch[1]}`;
-        }
-      }
-      return url;
-  };
-
-  return (
-    <>
-      <div className="space-y-3">
-        <FormLabel>Images (up to 5)</FormLabel>
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-          {fields.map((field, index) => {
-            const imageUrl = (field as { value: string }).value;
-            const displayUrl = convertGoogleDriveUrl(imageUrl);
-            return (
-              <div key={field.id} className="relative aspect-video group">
-                {editingIndex === index ? (
-                  <div className="w-full h-full flex flex-col items-center justify-center p-2 border-2 border-primary rounded-md bg-muted/50">
-                    <Input
-                      value={inputValue}
-                      onChange={(e) => setInputValue(e.target.value)}
-                      placeholder="Paste image URL"
-                      className="h-8 text-xs mb-2 focus-visible:ring-0 focus-visible:ring-offset-0"
-                    />
-                    <div className="flex gap-1.5">
-                      <Button type="button" size="icon" className="h-6 w-6" onClick={() => handleSave(index)}><Save className="h-3.5 w-3.5" /></Button>
-                      <Button type="button" variant="ghost" size="icon" className="h-6 w-6 hover:bg-transparent text-muted-foreground hover:text-muted-foreground" onClick={() => handleCancel(index)}><Ban className="h-3.5 w-3.5" /></Button>
-                    </div>
-                  </div>
-                ) : (
-                  <>
-                    <Image
-                      src={displayUrl || 'https://placehold.co/400x300.png'}
-                      alt={`Image ${index + 1}`}
-                      width={400}
-                      height={300}
-                      className="w-full h-full object-cover rounded-md border cursor-pointer"
-                      onClick={() => setEnlargedImageUrl(displayUrl)}
-                      onError={(e) => { e.currentTarget.src = 'https://placehold.co/400x300.png'; }}
-                    />
-                    <div className="absolute top-1 right-1 flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <Button type="button" size="icon" className="h-6 w-6 bg-black/60 hover:bg-black/80" onClick={() => handleEdit(index)}><Pencil className="h-3.5 w-3.5 text-white" /></Button>
-                      <Button type="button" variant="destructive" size="icon" className="h-6 w-6 bg-destructive/80 hover:bg-destructive" onClick={() => remove(index)}><Trash2 className="h-3.5 w-3.5 text-white" /></Button>
-                    </div>
-                  </>
-                )}
-              </div>
-            )
-          })}
-          {fields.length < 5 && (
-            <Button type="button" variant="outline" className="h-full aspect-video w-full border-2 border-solid flex flex-col items-center justify-center hover:bg-muted/30" onClick={handleAdd}>
-              <ImageIcon className="h-6 w-6 text-muted-foreground" />
-              <span className="text-xs mt-1 text-muted-foreground">Add Image</span>
-            </Button>
-          )}
-        </div>
-      </div>
-      {enlargedImageUrl && (
-        <div
-          className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 cursor-default"
-          onClick={() => setEnlargedImageUrl(null)}
-        >
-          <Image
-            src={enlargedImageUrl}
-            alt="Enlarged view"
-            width={1200}
-            height={800}
-            className="max-w-[90vw] max-h-[90vh] object-contain rounded-lg shadow-2xl cursor-pointer"
-          />
-        </div>
-      )}
-    </>
-  );
-}
-
-function CertificateImageGallery({ control, certIndex }: { control: any, certIndex: number }) {
-  const { fields, append, remove, update } = useFieldArray({
-    control,
-    name: `certificates.${certIndex}.imageUrls` as 'certificates.0.imageUrls',
-  });
-
-  const [editingIndex, setEditingIndex] = useState<number | null>(null);
-  const [inputValue, setInputValue] = useState('');
-  const [enlargedImageUrl, setEnlargedImageUrl] = useState<string | null>(null);
-
-  const handleAdd = () => {
-    if (fields.length >= 5) {
-      alert("You can add a maximum of 5 images.");
-      return;
-    }
-    append({ value: '' });
-    setEditingIndex(fields.length);
-    setInputValue('');
-  };
-
-  const handleEdit = (index: number) => {
-    setEditingIndex(index);
-    const fieldObject = fields[index] as { value: string };
-    setInputValue(fieldObject.value);
-  };
-
-  const handleSave = (index: number) => {
-    update(index, { value: inputValue });
-    setEditingIndex(null);
-    setInputValue('');
-  };
-  
-  const handleCancel = (index: number) => {
-    const fieldObject = fields[index] as { value: string };
-    if (fieldObject.value === '') {
-        remove(index);
-    }
-    setEditingIndex(null);
-    setInputValue('');
-  };
-  
-  const convertGoogleDriveUrl = (url: string): string => {
-      if (typeof url !== 'string' || !url) return '';
-      if (url.includes('drive.google.com/file/d/')) {
-        const fileIdMatch = url.match(/file\/d\/([a-zA-Z0-9_-]+)/);
-        if (fileIdMatch && fileIdMatch[1]) {
-          return `https://drive.google.com/uc?export=view&id=${fileIdMatch[1]}`;
-        }
-      }
-      return url;
-  };
-
-  return (
-    <>
-      <div className="space-y-3">
-        <FormLabel>Images (up to 5)</FormLabel>
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-          {fields.map((field, index) => {
-            const imageUrl = (field as { value: string }).value;
-            const displayUrl = convertGoogleDriveUrl(imageUrl);
-            return (
-              <div key={field.id} className="relative aspect-video group">
-                {editingIndex === index ? (
-                  <div className="w-full h-full flex flex-col items-center justify-center p-2 border-2 border-primary rounded-md bg-muted/50">
-                    <Input
-                      value={inputValue}
-                      onChange={(e) => setInputValue(e.target.value)}
-                      placeholder="Paste image URL"
-                      className="h-8 text-xs mb-2 focus-visible:ring-0 focus-visible:ring-offset-0"
-                    />
-                    <div className="flex gap-1.5">
-                      <Button type="button" size="icon" className="h-6 w-6" onClick={() => handleSave(index)}><Save className="h-3.5 w-3.5" /></Button>
-                      <Button type="button" variant="ghost" size="icon" className="h-6 w-6 hover:bg-transparent text-muted-foreground hover:text-muted-foreground" onClick={() => handleCancel(index)}><Ban className="h-3.5 w-3.5" /></Button>
-                    </div>
-                  </div>
-                ) : (
-                  <>
-                    <Image
-                      src={displayUrl || 'https://placehold.co/400x300.png'}
-                      alt={`Image ${index + 1}`}
-                      width={400}
-                      height={300}
-                      className="w-full h-full object-cover rounded-md border cursor-pointer"
-                      onClick={() => setEnlargedImageUrl(displayUrl)}
-                      onError={(e) => { e.currentTarget.src = 'https://placehold.co/400x300.png'; }}
-                    />
-                    <div className="absolute top-1 right-1 flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <Button type="button" size="icon" className="h-6 w-6 bg-black/60 hover:bg-black/80" onClick={() => handleEdit(index)}><Pencil className="h-3.5 w-3.5 text-white" /></Button>
-                      <Button type="button" variant="destructive" size="icon" className="h-6 w-6 bg-destructive/80 hover:bg-destructive" onClick={() => remove(index)}><Trash2 className="h-3.5 w-3.5 text-white" /></Button>
-                    </div>
-                  </>
-                )}
-              </div>
-            )
-          })}
-          {fields.length < 5 && (
-            <Button type="button" variant="outline" className="h-full aspect-video w-full border-2 border-solid flex flex-col items-center justify-center hover:bg-muted/30" onClick={handleAdd}>
-              <ImageIcon className="h-6 w-6 text-muted-foreground" />
-              <span className="text-xs mt-1 text-muted-foreground">Add Image</span>
-            </Button>
-          )}
-        </div>
-      </div>
-      {enlargedImageUrl && (
-        <div
-          className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 cursor-default"
-          onClick={() => setEnlargedImageUrl(null)}
-        >
-          <Image
-            src={enlargedImageUrl}
-            alt="Enlarged view"
-            width={1200}
-            height={800}
-            className="max-w-[90vw] max-h-[90vh] object-contain rounded-lg shadow-2xl cursor-pointer"
-          />
-        </div>
-      )}
-    </>
-  );
-}
-
 
 export function ResumeForm({ initialData, onSave, isLoading, showSkeleton }: ResumeFormProps) {
   const { toast } = useToast();
@@ -460,31 +216,7 @@ export function ResumeForm({ initialData, onSave, isLoading, showSkeleton }: Res
   };
 
   const onSubmit = (data: ResumeFormValues) => {
-    try {
-        const transformedData = {
-            ...data,
-            socials: {
-                ...data.socials,
-                otherLinks: data.socials?.otherLinks?.map(link => link.value).filter(Boolean) || [],
-            },
-            projects: data.projects?.map(p => ({
-                ...p, 
-                imageUrls: p.imageUrls?.map(img => img.value).filter(Boolean) || [] 
-            })),
-            certificates: data.certificates?.map(c => ({
-                ...c, 
-                imageUrls: c.imageUrls?.map(img => img.value).filter(Boolean) || []
-            })),
-        };
-        onSave(transformedData as unknown as ResumeFormValues);
-    } catch (error) {
-        console.error("Error during data transformation:", error);
-        toast({
-            title: "Processing Error",
-            description: "Could not process form data. Please check the console for details.",
-            variant: "destructive",
-        });
-    }
+    onSave(data);
   };
   
   if (showSkeleton) {
@@ -548,7 +280,7 @@ export function ResumeForm({ initialData, onSave, isLoading, showSkeleton }: Res
                              <FormField
                                 key={field.id}
                                 control={form.control}
-                                name={`socials.otherLinks.${index}.value`}
+                                name={`socials.otherLinks.${index}`}
                                 render={({ field }) => (
                                 <FormItem>
                                     <div className="flex items-center gap-2">
@@ -562,7 +294,7 @@ export function ResumeForm({ initialData, onSave, isLoading, showSkeleton }: Res
                         ))}
                     </div>
                      {otherLinkFields.length < 3 && (
-                        <Button type="button" variant="outline" size="sm" onClick={() => appendOtherLink({ value: '' })} className="mt-2"><PlusCircle className="mr-2 h-4 w-4"/>Add Other Link</Button>
+                        <Button type="button" variant="outline" size="sm" onClick={() => appendOtherLink('')} className="mt-2"><PlusCircle className="mr-2 h-4 w-4"/>Add Other Link</Button>
                     )}
                 </div>
               </div>
@@ -683,7 +415,16 @@ export function ResumeForm({ initialData, onSave, isLoading, showSkeleton }: Res
                       </div>
                       <FormControl><Input placeholder="Type skill and press Enter" onKeyDown={(e) => handleSkillKeyDown(e, `projects.${index}.skillsUsed`, index)} /></FormControl>
                     </FormItem>
-                    <ProjectImageGallery control={form.control} projectIndex={index} />
+                    <Controller
+                        control={form.control}
+                        name={`projects.${index}.imageUrls`}
+                        render={({ field }) => (
+                            <ImageGallery
+                                imageUrls={field.value || []}
+                                onUrlsChange={field.onChange}
+                            />
+                        )}
+                    />
                   </div>
                 ))}
                 <Button type="button" variant="outline" onClick={() => appendProj({ id: crypto.randomUUID(), title: '', url: '', skillsUsed: [], imageUrls: [] })}><PlusCircle className="mr-2"/> Add Project</Button>
@@ -702,7 +443,16 @@ export function ResumeForm({ initialData, onSave, isLoading, showSkeleton }: Res
                     <FormField control={form.control} name={`certificates.${index}.title`} render={({ field }) => ( <FormItem><FormLabel>Title</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem> )} />
                     <FormField control={form.control} name={`certificates.${index}.description`} render={({ field }) => ( <FormItem><FormLabel>Description (Optional)</FormLabel><FormControl><Textarea {...field} rows={2} /></FormControl><FormMessage /></FormItem> )} />
                     <FormField control={form.control} name={`certificates.${index}.date`} render={({ field }) => ( <FormItem><FormLabel>Date Awarded</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button variant="outline" className={cn("w-full text-left font-normal", !field.value && "text-muted-foreground")}><CalendarIcon className="mr-2 h-4 w-4" />{field.value ? format(field.value, 'PPP') : <span>Pick a date</span>}</Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0"><Calendar mode="single" selected={field.value} onSelect={field.onChange} /></PopoverContent></Popover><FormMessage /></FormItem> )} />
-                    <CertificateImageGallery control={form.control} certIndex={index} />
+                    <Controller
+                        control={form.control}
+                        name={`certificates.${index}.imageUrls`}
+                        render={({ field }) => (
+                            <ImageGallery
+                                imageUrls={field.value || []}
+                                onUrlsChange={field.onChange}
+                            />
+                        )}
+                    />
                   </div>
                 ))}
                 <Button type="button" variant="outline" onClick={() => appendCert({ id: crypto.randomUUID(), title: '', description: '', imageUrls: [] })}><PlusCircle className="mr-2"/> Add Certificate/Achievement</Button>
