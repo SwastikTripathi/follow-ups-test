@@ -30,7 +30,7 @@ export async function getPublicProfileBySlug(slug: string): Promise<{ fullName: 
     {
       cookies: {
         async get(name: string) {
-          return cookieStore.get(name)?.value
+          return (await cookieStore).get(name)?.value
         },
         set(name: string, value: string, options) {
           // No-op for a service client
