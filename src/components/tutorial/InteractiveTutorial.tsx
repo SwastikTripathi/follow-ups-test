@@ -6,8 +6,10 @@ import { ShepherdTour, ShepherdTourContext } from 'react-shepherd';
 import 'shepherd.js/dist/css/shepherd.css';
 import { steps } from './tutorial-steps';
 import { useOnboardingTutorial } from '@/contexts/OnboardingTutorialContext';
+import type { Tour } from 'shepherd.js';
 
-const tourOptions = {
+
+const tourOptions: Tour.TourOptions = {
   defaultStepOptions: {
     cancelIcon: {
       enabled: true,
