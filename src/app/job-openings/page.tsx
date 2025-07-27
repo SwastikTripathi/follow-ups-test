@@ -505,7 +505,7 @@ function JobOpeningsPageContent() {
         } else if (fetchedOpening) {
             const transformedOpening: JobOpening = {
                 ...fetchedOpening,
-                initial_email: fetchedOpening.initial_email as any,
+                initial_email: fetchedOpening.initial_email as InitialEmail | null,
                 status: fetchedOpening.status as JobOpening['status'],
                 tags: fetchedOpening.tags as string[] | null,
                 initial_email_date: startOfDay(new Date(fetchedOpening.initial_email_date)),
@@ -561,7 +561,7 @@ function JobOpeningsPageContent() {
         if (loggedFollowUp) {
             toast({title: 'Follow-up Logged!', description: 'Status updated to Sent.'});
             const currentOpening = jobOpenings.find(jo => jo.id === jobOpeningId);
-            const newStatus = currentOpening ? await determineNewLeadStatusOnServer(jobOpeningId, currentOpening.status as JobOpening['status'], currentUser.id) : null;
+            const newStatus = currentOpening ? await determineNewJobOpeningStatusOnServer(jobOpeningId, currentOpening.status as JobOpening['status'], currentUser.id) : null;
 
             let updatedOpeningForCache: JobOpening | undefined;
             setJobOpenings(prev => prev.map(jo => {
@@ -598,7 +598,7 @@ function JobOpeningsPageContent() {
 
       toast({ title: 'Follow-up Unlogged', description: 'Reverted to pending.' });
       const currentOpening = jobOpenings.find(jo => jo.id === jobOpeningId);
-      const newStatus = currentOpening ? await determineNewLeadStatusOnServer(jobOpeningId, currentOpening.status as JobOpening['status'], currentUser.id) : null;
+      const newStatus = currentOpening ? await determineNewJobOpeningStatusOnServer(jobOpeningId, currentOpening.status as JobOpening['status'], currentUser.id) : null;
 
       let updatedOpeningForCache: JobOpening | undefined;
       setJobOpenings(prev => prev.map(jo => {
@@ -787,7 +787,7 @@ function JobOpeningsPageContent() {
             </CardHeader>
             <CardContent> <p className="text-muted-foreground"> You need to be signed in to view and manage leads. </p> </CardContent>
           </Card>
-        ) : (allFilteredAndSortedLeads.length === 0 && actionRequiredLeads.length === 0 && otherLeads.length === 0) && !focusedLead ? (
+        ) : (allFilteredAndSortedLeads.length === 0 && actionRequiredLeads.length === 0 && otherLeads.length === 0) && !focusedOpening ? (
           <Card className="shadow-lg"><CardHeader><CardTitle className="font-headline flex items-center"><BriefcaseIconLucide className="mr-2 h-5 w-5 text-primary" />
             {showOnlyFavorites ? "No Favorite Leads Match Filters" : searchTerm ? "No Leads Match Your Search" :
              jobOpenings.length === 0 && initialCacheLoadAttempted ? "No Leads Yet" :
@@ -797,7 +797,7 @@ function JobOpeningsPageContent() {
             {searchTerm || showOnlyFavorites ? "Try adjusting your filters or " : ""}
             {jobOpenings.length === 0 && initialCacheLoadAttempted ? "Click \"Add New Lead\" to get started." : "Clear filters to see all leads."}
             </p></CardContent></Card>
-        ) : focusedLead ? null : (
+        ) : focusedOpening ? null : (
           sortOption === 'nextFollowUpDate_asc' ? (
             <>
               {actionRequiredLeads.length > 0 && ( <div className="space-y-3"> <h3 className="text-xl font-semibold text-foreground/90 font-headline">Due Today / Overdue</h3> <JobOpeningList jobOpenings={actionRequiredLeads} onEditOpening={handleEditOpening} onLogFollowUp={handleLogFollowUp} onUnlogFollowUp={handleUnlogFollowUp} onToggleFavorite={handleToggleFavorite} /> </div> )}
@@ -807,16 +807,16 @@ function JobOpeningsPageContent() {
           ) : ( <JobOpeningList jobOpenings={allFilteredAndSortedLeads} onEditOpening={handleEditOpening} onLogFollowUp={handleLogFollowUp} onUnlogFollowUp={handleUnlogFollowUp} onToggleFavorite={handleToggleFavorite} /> )
         )}
 
-        {focusedLead && (
-          <Dialog open={!!focusedLead} onOpenChange={(open) => { if (!open) handleCloseFocusedLeadDialog(); }}><DialogContent className="sm:max-w-xl p-0 border-0 shadow-2xl bg-transparent data-[state=open]:sm:zoom-in-90 data-[state=closed]:sm:zoom-out-90"><DialogHeader className="sr-only"><DialogTitle>{focusedLead.role_title}</DialogTitle><DialogDescription>Details for {focusedLead.role_title} at {focusedLead.company_name_cache}</DialogDescription></DialogHeader>
-              <JobOpeningCard opening={focusedLead} onEdit={() => { handleCloseFocusedLeadDialog(); handleEditOpening(focusedLead); }} onLogFollowUp={handleLogFollowUp} onUnlogFollowUp={handleUnlogFollowUp} onToggleFavorite={async (id, isFav) => { await handleToggleFavorite(id, isFav); const updatedFocusedLead = jobOpenings.find(op => op.id === id); if (updatedFocusedLead) setFocusedLead(updatedFocusedLead); else handleCloseFocusedLeadDialog(); }} isFocusedView={true} />
+        {focusedOpening && (
+          <Dialog open={!!focusedOpening} onOpenChange={(open) => { if (!open) handleCloseFocusedOpeningDialog(); }}><DialogContent className="sm:max-w-xl p-0 border-0 shadow-2xl bg-transparent data-[state=open]:sm:zoom-in-90 data-[state=closed]:sm:zoom-out-90"><DialogHeader className="sr-only"><DialogTitle>{focusedOpening.role_title}</DialogTitle><DialogDescription>Details for {focusedOpening.role_title} at {focusedOpening.company_name_cache}</DialogDescription></DialogHeader>
+              <JobOpeningCard opening={focusedOpening} onEdit={() => { handleCloseFocusedOpeningDialog(); handleEditOpening(focusedOpening); }} onLogFollowUp={handleLogFollowUp} onUnlogFollowUp={handleUnlogFollowUp} onToggleFavorite={async (id, isFav) => { await handleToggleFavorite(id, isFav); const updatedFocusedLead = jobOpenings.find(op => op.id === id); if (updatedFocusedLead) setFocusedOpening(updatedFocusedLead); else handleCloseFocusedOpeningDialog(); }} isFocusedView={true} />
           </DialogContent></Dialog>
         )}
 
-        <AddLeadDialog isOpen={isAddDialogOpen} onOpenChange={setIsAddDialogOpen} onAddLead={handleAddLead} companies={companies} contacts={contacts} companiesCount={globalCounts.jobOpenings} contactsCount={globalCounts.contacts} jobOpeningsCount={globalCounts.jobOpenings} onAddNewCompany={handleAddNewCompanyToListSupabase} onAddNewContact={handleAddNewContactToListSupabase} defaultEmailTemplates={userSettings?.default_email_templates as DefaultFollowUpTemplates | undefined} prefillData={addDialogPrefill} />
-        {editingLead && ( <EditLeadDialog isOpen={isEditDialogOpen} onOpenChange={setIsEditDialogOpen} onUpdateLead={handleUpdateLead} leadToEdit={editingLead} onInitiateDelete={handleInitiateDeleteLead} companies={companies} contacts={contacts} companiesCount={globalCounts.jobOpenings} contactsCount={globalCounts.contacts} onAddNewCompany={handleAddNewCompanyToListSupabase} onAddNewContact={handleAddNewContactToListSupabase} user={currentUser} userSettings={userSettings}/> )}
-        <AlertDialog open={isDeleteConfirmOpen} onOpenChange={setIsDeleteConfirmOpen}><AlertDialogContent><AlertDialogHeader><ShadAlertDialogTitle>Are you sure?</ShadAlertDialogTitle><AlertDialogDescription>This action cannot be undone. This will permanently delete the lead: <span className="font-semibold"> {leadToDelete?.role_title} at {leadToDelete?.company_name_cache}</span>. All associated follow-up records will also be deleted.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel onClick={() => {setLeadToDelete(null); setIsDeleteConfirmOpen(false);}}>Cancel</AlertDialogCancel><AlertDialogAction onClick={handleConfirmDeleteLead} className="bg-destructive hover:bg-destructive/90">Delete Lead</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>
-        <LeadsHelpModal isOpen={isHelpModalOpen} onOpenChange={setIsHelpModalOpen} />
+        <AddJobOpeningDialog isOpen={isAddDialogOpen} onOpenChange={setIsAddDialogOpen} onAddJobOpening={handleAddJobOpening} companies={companies} contacts={contacts} companiesCount={globalCounts.jobOpenings} contactsCount={globalCounts.contacts} jobOpeningsCount={globalCounts.jobOpenings} onAddNewCompany={handleAddNewCompanyToListSupabase} onAddNewContact={handleAddNewContactToListSupabase} defaultEmailTemplates={userSettings?.default_email_templates as DefaultFollowUpTemplates | undefined} prefillData={addDialogPrefill} />
+        {editingOpening && ( <EditJobOpeningDialog isOpen={isEditDialogOpen} onOpenChange={setIsEditDialogOpen} onUpdateJobOpening={handleUpdateJobOpening} openingToEdit={editingOpening} onInitiateDelete={handleInitiateDeleteOpening} companies={companies} contacts={contacts} companiesCount={globalCounts.jobOpenings} contactsCount={globalCounts.contacts} onAddNewCompany={handleAddNewCompanyToListSupabase} onAddNewContact={handleAddNewContactToListSupabase} user={currentUser} userSettings={userSettings}/> )}
+        <AlertDialog open={isDeleteConfirmOpen} onOpenChange={setIsDeleteConfirmOpen}><AlertDialogContent><AlertDialogHeader><ShadAlertDialogTitle>Are you sure?</ShadAlertDialogTitle><AlertDialogDescription>This action cannot be undone. This will permanently delete the lead: <span className="font-semibold"> {openingToDelete?.role_title} at {openingToDelete?.company_name_cache}</span>. All associated follow-up records will also be deleted.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel onClick={() => {setOpeningToDelete(null); setIsDeleteConfirmOpen(false);}}>Cancel</AlertDialogCancel><AlertDialogAction onClick={handleConfirmDeleteOpening} className="bg-destructive hover:bg-destructive/90">Delete Lead</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>
+        <JobOpeningsHelpModal isOpen={isHelpModalOpen} onOpenChange={setIsHelpModalOpen} />
          {isGenerateLeadFromJDOpen && (
             <GenerateLeadFromJDDialog
                 isOpen={isGenerateLeadFromJDOpen}
@@ -838,10 +838,12 @@ function JobOpeningsPageContent() {
   );
 }
 
-export default function LeadsPage() {
+export default function JobOpeningsPage() {
   return (
     <Suspense fallback={<AppLayout><div className="flex w-full h-full items-center justify-center"><Loader2 className="h-12 w-12 animate-spin text-primary" /></div></AppLayout>}>
-        <LeadsPageContent />
+        <JobOpeningsPageContent />
     </Suspense>
   )
 }
+
+    
