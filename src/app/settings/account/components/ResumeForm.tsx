@@ -21,6 +21,9 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import Image from 'next/image';
 
+const urlField = z.object({ value: z.string().url("Must be a valid URL").max(2048, "URL is too long.").or(z.literal('')) });
+type UrlFieldType = z.infer<typeof urlField>;
+
 // Zod Schemas for Resume sections
 const resumeContactInfoSchema = z.object({
   name: z.string().min(1, 'Name is required').max(100, "Name cannot exceed 100 characters."),
@@ -66,7 +69,7 @@ const resumeProjectSchema = z.object({
   url: z.string().url("Must be a valid URL").optional().or(z.literal('')),
   endDate: z.date().optional(),
   skillsUsed: z.array(z.string().max(50, "Skill cannot exceed 50 characters.")).optional(),
-  imageUrls: z.array(z.object({ value: z.string().url("Must be a valid URL").max(2048, "URL is too long.").or(z.literal('')) })).max(5, "You can add up to 5 images.").optional(),
+  imageUrls: z.array(urlField).max(5, "You can add up to 5 images.").optional(),
 });
 
 const resumeCertificateSchema = z.object({
@@ -74,7 +77,7 @@ const resumeCertificateSchema = z.object({
   title: z.string().min(1, 'Title is required').max(150, "Title cannot exceed 150 characters."),
   description: z.string().max(1000, "Description is too long.").optional(),
   date: z.date().optional(),
-  imageUrls: z.array(z.object({ value: z.string().url("Must be a valid URL").max(2048, "URL is too long.").or(z.literal('')) })).max(5, "You can add up to 5 images.").optional(),
+  imageUrls: z.array(urlField).max(5, "You can add up to 5 images.").optional(),
 });
 
 export const resumeSchema = z.object({
@@ -184,7 +187,7 @@ function ProjectImageGallery({ control, projectIndex }: { control: any, projectI
 
   const handleEdit = (index: number) => {
     setEditingIndex(index);
-    const fieldObject = fields[index] as { value: string; id: string; };
+    const fieldObject = fields[index];
     setInputValue(fieldObject.value);
   };
 
@@ -195,7 +198,7 @@ function ProjectImageGallery({ control, projectIndex }: { control: any, projectI
   };
 
   const handleCancel = (index: number) => {
-    const fieldObject = fields[index] as { value: string; id: string; };
+    const fieldObject = fields[index];
     if (fieldObject.value === '') {
         remove(index);
     }
@@ -220,7 +223,7 @@ function ProjectImageGallery({ control, projectIndex }: { control: any, projectI
         <FormLabel>Images (up to 5)</FormLabel>
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
           {fields.map((field, index) => {
-            const imageUrl = (field as { value: string }).value;
+            const imageUrl = field.value;
             const displayUrl = convertGoogleDriveUrl(imageUrl);
             return (
               <div key={field.id} className="relative aspect-video group">
@@ -305,7 +308,7 @@ function CertificateImageGallery({ control, certIndex }: { control: any, certInd
 
   const handleEdit = (index: number) => {
     setEditingIndex(index);
-    const fieldObject = fields[index] as { value: string; id: string; };
+    const fieldObject = fields[index];
     setInputValue(fieldObject.value);
   };
 
@@ -316,7 +319,7 @@ function CertificateImageGallery({ control, certIndex }: { control: any, certInd
   };
   
   const handleCancel = (index: number) => {
-    const fieldObject = fields[index] as { value: string; id: string; };
+    const fieldObject = fields[index];
     if (fieldObject.value === '') {
         remove(index);
     }
@@ -341,7 +344,7 @@ function CertificateImageGallery({ control, certIndex }: { control: any, certInd
         <FormLabel>Images (up to 5)</FormLabel>
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
           {fields.map((field, index) => {
-            const imageUrl = (field as { value: string }).value;
+            const imageUrl = field.value;
             const displayUrl = convertGoogleDriveUrl(imageUrl);
             return (
               <div key={field.id} className="relative aspect-video group">
