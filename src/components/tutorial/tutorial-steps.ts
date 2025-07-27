@@ -20,6 +20,13 @@ type PopperPlacement =
   | 'left-start'
   | 'left-end';
 
+// Define the shape of a button object
+interface StepButton {
+    classes?: string;
+    text: string;
+    type?: 'back' | 'cancel' | 'next';
+}
+
 // Extend the base Step type to include all properties we're using.
 interface StepWithTypedAttachment extends Step {
   id: string;
@@ -27,7 +34,7 @@ interface StepWithTypedAttachment extends Step {
     element: string;
     on: PopperPlacement;
   };
-  buttons?: Step.StepButton[];
+  buttons?: StepButton[];
   canClickTarget?: boolean;
   title?: string;
   text?: string | ((element: HTMLElement) => string) | HTMLElement;
