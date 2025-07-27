@@ -115,7 +115,7 @@ export function OnboardingForm({
       annual_income: values.annualIncome === '' ? null : Number(values.annualIncome),
       income_currency: values.incomeCurrency === 'Prefer not to say' ? null : values.incomeCurrency,
       current_role: values.currentRole,
-      usage_preference: existingSettings?.usage_preference || 'job_hunt',
+      usage_preference: 'job_hunt', // Hardcoded as per new requirement
       follow_up_cadence_days: (existingSettings?.follow_up_cadence_days as [number, number, number]) || DEFAULT_FOLLOW_UP_CADENCE_DAYS,
       default_email_templates: (existingSettings?.default_email_templates || {
         followUp1: { subject: '', openingLine: '' },

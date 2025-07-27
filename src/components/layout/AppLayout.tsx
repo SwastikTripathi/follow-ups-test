@@ -39,6 +39,8 @@ import { useCounts } from '@/contexts/CountsContext';
 import { useUserDataCache } from '@/contexts/UserDataCacheContext';
 import { useUserSession } from '@/contexts/UserSessionContext';
 import { TooltipProvider } from '@/components/ui/tooltip';
+import { OnboardingTutorialProvider, useOnboardingTutorial } from '@/contexts/OnboardingTutorialContext';
+import { InteractiveTutorial } from '../tutorial/InteractiveTutorial';
 
 const PUBLIC_PATHS = ['/landing', '/auth', '/pricing', '/about', '/contact', '/careers', '/partner-with-us', '/privacy-policy', '/terms-and-conditions', '/cookie-policy', '/refund-policy'];
 const BLOG_PATHS_REGEX = /^\/blog(\/.*)?$/;
@@ -90,6 +92,7 @@ function AppLayoutInner({ children }: { children: ReactNode }) {
 
   const isPublicPath = PUBLIC_PATHS.includes(pathname) || BLOG_PATHS_REGEX.test(pathname);
   const [showOnboardingForm, setShowOnboardingForm] = useState(false);
+  const { startTutorial, setStartTutorial } = useOnboardingTutorial();
   const [onboardingCheckComplete, setOnboardingCheckComplete] = useState(false);
   
   useEffect(() => {
@@ -193,7 +196,8 @@ function AppLayoutInner({ children }: { children: ReactNode }) {
                 localStorage.setItem('onboardingCompleted', 'false');
             }
         } else {
-            setShowOnboardingForm(false); 
+            setShowOnboardingForm(false);
+            setStartTutorial(true);
         }
       }
       setOnboardingCheckComplete(true);
@@ -207,7 +211,8 @@ function AppLayoutInner({ children }: { children: ReactNode }) {
     setGlobalUserSettings, setHasFetchedSettingsOnce, setGlobalIsLoadingSettings, 
     setCounts, setGlobalIsLoadingCounts, 
     clearUserDataCache,
-    previousUserIdRef
+    previousUserIdRef,
+    setStartTutorial
   ]);
 
   useEffect(() => {
@@ -240,6 +245,23 @@ function AppLayoutInner({ children }: { children: ReactNode }) {
     setGlobalUserSettings(savedSettings);
     updateCachedUserSettings(savedSettings);
     setShowOnboardingForm(false);
+    setStartTutorial(true);
+  };
+
+  const handleTutorialComplete = async () => {
+    setStartTutorial(false);
+    localStorage.setItem('onboardingCompleted', 'true');
+    if (currentUser) {
+      const { error } = await supabase
+        .from('user_settings')
+        .update({ onboarding_complete: true })
+        .eq('user_id', currentUser.id);
+      if (error) {
+        toast({ title: 'Error saving tutorial status', description: error.message, variant: 'destructive' });
+      } else {
+        updateCachedUserSettings({ ...userSettings, onboarding_complete: true } as UserSettings);
+      }
+    }
   };
   
   const isLoadingInitialUserAndAuth = isLoadingAuthContext || !initialAuthCheckCompleted;
@@ -408,6 +430,7 @@ function AppLayoutInner({ children }: { children: ReactNode }) {
           </header>
           <main className="flex-1 p-4 md:p-6 lg:p-8">
             {children}
+            <InteractiveTutorial onTutorialComplete={handleTutorialComplete}/>
           </main>
         </SidebarInset>
       </SidebarProvider>
@@ -418,6 +441,8 @@ function AppLayoutInner({ children }: { children: ReactNode }) {
 export function AppLayout({ children }: { children: ReactNode }) {
   // We no longer need to wrap children with providers here as they are in RootLayout
   return (
-      <AppLayoutInner>{children}</AppLayoutInner>
+      <OnboardingTutorialProvider>
+        <AppLayoutInner>{children}</AppLayoutInner>
+      </OnboardingTutorialProvider>
   );
 }

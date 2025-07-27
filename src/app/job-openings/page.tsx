@@ -339,6 +339,7 @@ function JobOpeningsPageContent() {
       p_is_favorite: false, 
       p_contact_inputs: contactInputs,
       p_follow_up_inputs: followUpInputs,
+      p_initial_email: values.initialEmail,
     };
 
     setIsAddDialogOpen(false);
@@ -441,6 +442,7 @@ function JobOpeningsPageContent() {
         p_company_id: formValues.company_id || null,
         p_role_title: formValues.roleTitle,
         p_initial_email_date: formValues.initialEmailDate.toISOString(),
+        p_initial_email: formValues.initialEmail,
         p_status: formValues.status,
         p_job_description_url: formValues.jobDescriptionUrl || null,
         p_notes: formValues.notes || null,
@@ -468,6 +470,7 @@ function JobOpeningsPageContent() {
         } else if (fetchedOpening) {
             const transformedOpening: JobOpening = {
                 ...fetchedOpening,
+                initial_email: fetchedOpening.initial_email as any,
                 status: fetchedOpening.status as JobOpening['status'],
                 tags: fetchedOpening.tags as string[] | null,
                 initial_email_date: startOfDay(new Date(fetchedOpening.initial_email_date)),
@@ -640,21 +643,21 @@ function JobOpeningsPageContent() {
     }
   };
 
-  const { actionRequiredOpenings, otherOpenings, allFilteredAndSortedOpenings } = useMemo(() => {
+  const { actionRequiredLeads, otherLeads, allFilteredAndSortedLeads } = useMemo(() => {
     let filtered = [...jobOpenings];
-    if (showOnlyFavorites) filtered = filtered.filter(opening => opening.is_favorite);
+    if (showOnlyFavorites) filtered = filtered.filter(lead => lead.is_favorite);
     if (searchTerm) {
-        filtered = filtered.filter(opening => {
+        filtered = filtered.filter(lead => {
         const term = searchTerm.toLowerCase();
-        return (opening.company_name_cache || '').toLowerCase().includes(term) ||
-               (opening.role_title || '').toLowerCase().includes(term) ||
-               opening.associated_contacts?.some(ac => (ac.name || '').toLowerCase().includes(term) || (ac.email || '').toLowerCase().includes(term)) ||
-               (opening.status || '').toLowerCase().includes(term) ||
-               (searchInNotes && opening.notes && opening.notes.toLowerCase().includes(term));
+        return (lead.company_name_cache || '').toLowerCase().includes(term) ||
+               (lead.role_title || '').toLowerCase().includes(term) ||
+               lead.associated_contacts?.some(ac => (ac.name || '').toLowerCase().includes(term) || (ac.email || '').toLowerCase().includes(term)) ||
+               (lead.status || '').toLowerCase().includes(term) ||
+               (searchInNotes && lead.notes && lead.notes.toLowerCase().includes(term));
         });
     }
-    const getNextPendingFollowUpDate = (opening: JobOpening): Date | null => {
-      const pendingFollowUps = (opening.followUps || []).filter(fu => fu.status === 'Pending' && isValid(fu.follow_up_date)).sort((a, b) => a.follow_up_date.getTime() - b.follow_up_date.getTime());
+    const getNextPendingFollowUpDate = (lead: JobOpening): Date | null => {
+      const pendingFollowUps = (lead.followUps || []).filter(fu => fu.status === 'Pending' && isValid(fu.follow_up_date)).sort((a, b) => a.follow_up_date.getTime() - b.follow_up_date.getTime());
       return pendingFollowUps.length > 0 ? pendingFollowUps[0].follow_up_date : null;
     };
     switch (sortOption) {
@@ -673,23 +676,22 @@ function JobOpeningsPageContent() {
     if (sortOption === 'nextFollowUpDate_asc') {
       const todayStart = startOfDay(new Date());
       const actionReq: JobOpening[] = []; const othersArr: JobOpening[] = [];
-      filtered.forEach(opening => {
-        const nextFollowUpDate = getNextPendingFollowUpDate(opening);
+      filtered.forEach(lead => {
+        const nextFollowUpDate = getNextPendingFollowUpDate(lead);
         if (nextFollowUpDate && isValid(nextFollowUpDate)) {
           const followUpDayStart = startOfDay(nextFollowUpDate);
-          if (isToday(followUpDayStart) || isBefore(followUpDayStart, todayStart)) actionReq.push(opening);
-          else othersArr.push(opening);
-        } else othersArr.push(opening);
+          if (isToday(followUpDayStart) || isBefore(followUpDayStart, todayStart)) actionReq.push(lead);
+          else othersArr.push(lead);
+        } else othersArr.push(lead);
       });
-      return { actionRequiredOpenings: actionReq, otherOpenings: othersArr, allFilteredAndSortedOpenings: [] };
+      return { actionRequiredLeads: actionReq, otherLeads: othersArr, allFilteredAndSortedLeads: [] };
     }
-    return { actionRequiredOpenings: [], otherOpenings: [], allFilteredAndSortedOpenings: filtered };
+    return { actionRequiredLeads: [], otherLeads: [], allFilteredAndSortedLeads: filtered };
   }, [jobOpenings, searchTerm, searchInNotes, sortOption, showOnlyFavorites]);
 
   const clearSearch = () => setSearchTerm('');
   const isAddButtonDisabled = !currentUser || isLoadingCache || subscriptionLoading || (isInGracePeriod && effectiveLimits.jobOpenings < Infinity && globalCounts.jobOpenings >= effectiveLimits.jobOpenings) || isLoadingUserAuth;
-
-
+  
   if (isLoadingUserAuth || !initialAuthCheckCompleted) {
     return (<AppLayout><div className="flex justify-center items-center h-64"><Loader2 className="h-12 w-12 animate-spin text-primary" /></div></AppLayout>);
   }
@@ -698,19 +700,23 @@ function JobOpeningsPageContent() {
 
   return (
     <AppLayout>
-      <div className="space-y-6" id="job-openings-main-content-area">
+      <div className="space-y-6" id="leads-main-content-area">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
             <h2 className="text-3xl font-bold tracking-tight font-headline">Leads</h2>
             <p className="text-muted-foreground">Manage your sales leads and follow-ups.</p>
           </div>
           <div className="flex gap-2">
-            <Button variant="outline" size="icon" className="rounded-full hover:bg-background hover:text-foreground" onClick={() => setIsHelpModalOpen(true)} disabled={!currentUser || isLoadingUserAuth}>
+             <Button variant="outline" onClick={handleAddWithAIClick} disabled={isAddButtonDisabled || !isApiKeyLoaded}>
+                { !isApiKeyLoaded ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Wand2 className="mr-2 h-4 w-4" /> }
+                Add with AI
+             </Button>
+            <Button onClick={handleAddLeadClick} disabled={isAddButtonDisabled} id="add-new-lead-button">
+                <PlusCircle className="mr-2 h-4 w-4" /> Add New Lead
+            </Button>
+            <Button variant="outline" size="icon" className="rounded-full hover:bg-background hover:text-foreground hidden sm:inline-flex" onClick={() => setIsHelpModalOpen(true)} disabled={!currentUser || isLoadingUserAuth}>
                 <HelpCircle className="h-5 w-5" />
                 <span className="sr-only">Help</span>
-            </Button>
-            <Button onClick={handleAddOpeningClick} disabled={isAddButtonDisabled} id="add-new-opening-button-jobopenings">
-                <PlusCircle className="mr-2 h-4 w-4" /> Add New Lead
             </Button>
           </div>
         </div>
@@ -718,15 +724,15 @@ function JobOpeningsPageContent() {
          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 items-center">
           <div className="relative flex items-center w-full border border-input rounded-md shadow-sm bg-background sm:col-span-2 md:col-span-1 lg:col-span-2">
             <SearchIcon className="absolute left-3 h-4 w-4 text-muted-foreground" />
-            <Input id="job-openings-search-input" data-tutorial-target="job-openings-search-input" type="text" placeholder="Search leads..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10 pr-3 py-2 h-10 flex-grow border-none focus:ring-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0" disabled={!currentUser || pageContentLoading || subscriptionLoading} />
+            <Input id="leads-search-input" data-tutorial-target="leads-search-input" type="text" placeholder="Search leads..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10 pr-3 py-2 h-10 flex-grow border-none focus:ring-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0" disabled={!currentUser || pageContentLoading || subscriptionLoading} />
             {searchTerm && ( <Button variant="ghost" size="icon" className="absolute right-28 mr-1 h-7 w-7 hover:bg-transparent focus-visible:bg-transparent hover:text-primary" onClick={clearSearch}> <XCircle className="h-4 w-4 text-muted-foreground group-hover:text-primary" /> </Button> )}
             <div className="flex items-center space-x-2 pr-3 border-l border-input h-full pl-3">
-              <Checkbox id="searchOpeningNotes" checked={searchInNotes} onCheckedChange={(checked) => setSearchInNotes(checked as boolean)} className="h-4 w-4" disabled={!currentUser || pageContentLoading || subscriptionLoading} />
-              <Label htmlFor="searchOpeningNotes" className="text-xs text-muted-foreground whitespace-nowrap">Include Notes</Label>
+              <Checkbox id="searchLeadNotes" checked={searchInNotes} onCheckedChange={(checked) => setSearchInNotes(checked as boolean)} className="h-4 w-4" disabled={!currentUser || pageContentLoading || subscriptionLoading} />
+              <Label htmlFor="searchLeadNotes" className="text-xs text-muted-foreground whitespace-nowrap">Include Notes</Label>
             </div>
           </div>
           <Select value={sortOption} onValueChange={(value) => setSortOption(value as SortOptionValue)} disabled={!currentUser || pageContentLoading || subscriptionLoading}>
-            <SelectTrigger className="w-full" id="job-openings-sort-trigger"><SelectValue placeholder="Sort by..." /></SelectTrigger>
+            <SelectTrigger className="w-full" id="leads-sort-trigger"><SelectValue placeholder="Sort by..." /></SelectTrigger>
             <SelectContent>{SORT_OPTIONS.map(option => (<SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>))}</SelectContent>
           </Select>
            <div className="flex items-center gap-2">
@@ -745,7 +751,7 @@ function JobOpeningsPageContent() {
             </CardHeader>
             <CardContent> <p className="text-muted-foreground"> You need to be signed in to view and manage leads. </p> </CardContent>
           </Card>
-        ) : (allFilteredAndSortedOpenings.length === 0 && actionRequiredOpenings.length === 0 && otherOpenings.length === 0) && !focusedOpening ? (
+        ) : (allFilteredAndSortedLeads.length === 0 && actionRequiredLeads.length === 0 && otherLeads.length === 0) && !focusedLead ? (
           <Card className="shadow-lg"><CardHeader><CardTitle className="font-headline flex items-center"><BriefcaseIconLucide className="mr-2 h-5 w-5 text-primary" />
             {showOnlyFavorites ? "No Favorite Leads Match Filters" : searchTerm ? "No Leads Match Your Search" :
              jobOpenings.length === 0 && initialCacheLoadAttempted ? "No Leads Yet" :
@@ -755,35 +761,51 @@ function JobOpeningsPageContent() {
             {searchTerm || showOnlyFavorites ? "Try adjusting your filters or " : ""}
             {jobOpenings.length === 0 && initialCacheLoadAttempted ? "Click \"Add New Lead\" to get started." : "Clear filters to see all leads."}
             </p></CardContent></Card>
-        ) : focusedOpening ? null : (
+        ) : focusedLead ? null : (
           sortOption === 'nextFollowUpDate_asc' ? (
             <>
-              {actionRequiredOpenings.length > 0 && ( <div className="space-y-3"> <h3 className="text-xl font-semibold text-foreground/90 font-headline">Due Today / Overdue</h3> <JobOpeningList jobOpenings={actionRequiredOpenings} onEditOpening={handleEditOpening} onLogFollowUp={handleLogFollowUp} onUnlogFollowUp={handleUnlogFollowUp} onToggleFavorite={handleToggleFavorite} /> </div> )}
-              {actionRequiredOpenings.length > 0 && otherOpenings.length > 0 && ( <Separator className="my-6" /> )}
-              {otherOpenings.length > 0 && ( <div className="space-y-3"> <h3 className="text-xl font-semibold text-foreground/90 font-headline">Upcoming Follow-ups</h3> <JobOpeningList jobOpenings={otherOpenings} onEditOpening={handleEditOpening} onLogFollowUp={handleLogFollowUp} onUnlogFollowUp={handleUnlogFollowUp} onToggleFavorite={handleToggleFavorite} /> </div> )}
+              {actionRequiredLeads.length > 0 && ( <div className="space-y-3"> <h3 className="text-xl font-semibold text-foreground/90 font-headline">Due Today / Overdue</h3> <LeadList leads={actionRequiredLeads} onEditLead={handleEditLead} onLogFollowUp={handleLogFollowUp} onUnlogFollowUp={handleUnlogFollowUp} onToggleFavorite={handleToggleFavorite} /> </div> )}
+              {actionRequiredLeads.length > 0 && otherLeads.length > 0 && ( <Separator className="my-6" /> )}
+              {otherLeads.length > 0 && ( <div className="space-y-3"> <h3 className="text-xl font-semibold text-foreground/90 font-headline">Upcoming Follow-ups</h3> <LeadList leads={otherLeads} onEditLead={handleEditLead} onLogFollowUp={handleLogFollowUp} onUnlogFollowUp={handleUnlogFollowUp} onToggleFavorite={handleToggleFavorite} /> </div> )}
             </>
-          ) : ( <JobOpeningList jobOpenings={allFilteredAndSortedOpenings} onEditOpening={handleEditOpening} onLogFollowUp={handleLogFollowUp} onUnlogFollowUp={handleUnlogFollowUp} onToggleFavorite={handleToggleFavorite} /> )
+          ) : ( <LeadList leads={allFilteredAndSortedLeads} onEditLead={handleEditLead} onLogFollowUp={handleLogFollowUp} onUnlogFollowUp={handleUnlogFollowUp} onToggleFavorite={handleToggleFavorite} /> )
         )}
 
-        {focusedOpening && (
-          <Dialog open={!!focusedOpening} onOpenChange={(open) => { if (!open) handleCloseFocusedOpeningDialog(); }}><DialogContent className="sm:max-w-xl p-0 border-0 shadow-2xl bg-transparent data-[state=open]:sm:zoom-in-90 data-[state=closed]:sm:zoom-out-90"><DialogHeader className="sr-only"><DialogTitle>{focusedOpening.role_title}</DialogTitle><DialogDescription>Details for {focusedOpening.role_title} at {focusedOpening.company_name_cache}</DialogDescription></DialogHeader>
-              <JobOpeningCard opening={focusedOpening} onEdit={() => { handleCloseFocusedOpeningDialog(); handleEditOpening(focusedOpening); }} onLogFollowUp={handleLogFollowUp} onUnlogFollowUp={handleUnlogFollowUp} onToggleFavorite={async (id, isFav) => { await handleToggleFavorite(id, isFav); const updatedFocusedOpening = jobOpenings.find(op => op.id === id); if (updatedFocusedOpening) setFocusedOpening(updatedFocusedOpening); else handleCloseFocusedOpeningDialog(); }} isFocusedView={true} />
+        {focusedLead && (
+          <Dialog open={!!focusedLead} onOpenChange={(open) => { if (!open) handleCloseFocusedLeadDialog(); }}><DialogContent className="sm:max-w-xl p-0 border-0 shadow-2xl bg-transparent data-[state=open]:sm:zoom-in-90 data-[state=closed]:sm:zoom-out-90"><DialogHeader className="sr-only"><DialogTitle>{focusedLead.role_title}</DialogTitle><DialogDescription>Details for {focusedLead.role_title} at {focusedLead.company_name_cache}</DialogDescription></DialogHeader>
+              <LeadCard lead={focusedLead} onEdit={() => { handleCloseFocusedLeadDialog(); handleEditLead(focusedLead); }} onLogFollowUp={handleLogFollowUp} onUnlogFollowUp={handleUnlogFollowUp} onToggleFavorite={async (id, isFav) => { await handleToggleFavorite(id, isFav); const updatedFocusedLead = jobOpenings.find(op => op.id === id); if (updatedFocusedLead) setFocusedLead(updatedFocusedLead); else handleCloseFocusedLeadDialog(); }} isFocusedView={true} />
           </DialogContent></Dialog>
         )}
 
-        <AddJobOpeningDialog isOpen={isAddDialogOpen} onOpenChange={setIsAddDialogOpen} onAddJobOpening={handleAddJobOpening} companies={companies} contacts={contacts} companiesCount={globalCounts.companies} contactsCount={globalCounts.contacts} jobOpeningsCount={globalCounts.jobOpenings} onAddNewCompany={handleAddNewCompanyToListSupabase} onAddNewContact={handleAddNewContactToListSupabase} defaultEmailTemplates={userSettings?.default_email_templates as DefaultFollowUpTemplates | undefined} />
-        {editingOpening && ( <EditJobOpeningDialog isOpen={isEditDialogOpen} onOpenChange={setIsEditDialogOpen} onUpdateJobOpening={handleUpdateJobOpening} openingToEdit={editingOpening} onInitiateDelete={handleInitiateDeleteOpening} companies={companies} contacts={contacts} companiesCount={globalCounts.companies} contactsCount={globalCounts.contacts} onAddNewCompany={handleAddNewCompanyToListSupabase} onAddNewContact={handleAddNewContactToListSupabase} /> )}
-        <AlertDialog open={isDeleteConfirmOpen} onOpenChange={setIsDeleteConfirmOpen}><AlertDialogContent><AlertDialogHeader><ShadAlertDialogTitle>Are you sure?</ShadAlertDialogTitle><AlertDialogDescription>This action cannot be undone. This will permanently delete the lead: <span className="font-semibold"> {openingToDelete?.role_title} at {openingToDelete?.company_name_cache}</span>. All associated follow-up records will also be deleted.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel onClick={() => {setOpeningToDelete(null); setIsDeleteConfirmOpen(false);}}>Cancel</AlertDialogCancel><AlertDialogAction onClick={handleConfirmDeleteOpening} className="bg-destructive hover:bg-destructive/90">Delete Lead</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>
-        <JobOpeningsHelpModal isOpen={isHelpModalOpen} onOpenChange={setIsHelpModalOpen} />
+        <AddLeadDialog isOpen={isAddDialogOpen} onOpenChange={setIsAddDialogOpen} onAddLead={handleAddLead} companies={companies} contacts={contacts} companiesCount={globalCounts.jobOpenings} contactsCount={globalCounts.contacts} jobOpeningsCount={globalCounts.jobOpenings} onAddNewCompany={handleAddNewCompanyToListSupabase} onAddNewContact={handleAddNewContactToListSupabase} defaultEmailTemplates={userSettings?.default_email_templates as DefaultFollowUpTemplates | undefined} prefillData={addDialogPrefill} />
+        {editingLead && ( <EditLeadDialog isOpen={isEditDialogOpen} onOpenChange={setIsEditDialogOpen} onUpdateLead={handleUpdateLead} leadToEdit={editingLead} onInitiateDelete={handleInitiateDeleteLead} companies={companies} contacts={contacts} companiesCount={globalCounts.jobOpenings} contactsCount={globalCounts.contacts} onAddNewCompany={handleAddNewCompanyToListSupabase} onAddNewContact={handleAddNewContactToListSupabase} user={currentUser} userSettings={userSettings}/> )}
+        <AlertDialog open={isDeleteConfirmOpen} onOpenChange={setIsDeleteConfirmOpen}><AlertDialogContent><AlertDialogHeader><ShadAlertDialogTitle>Are you sure?</ShadAlertDialogTitle><AlertDialogDescription>This action cannot be undone. This will permanently delete the lead: <span className="font-semibold"> {leadToDelete?.role_title} at {leadToDelete?.company_name_cache}</span>. All associated follow-up records will also be deleted.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel onClick={() => {setLeadToDelete(null); setIsDeleteConfirmOpen(false);}}>Cancel</AlertDialogCancel><AlertDialogAction onClick={handleConfirmDeleteLead} className="bg-destructive hover:bg-destructive/90">Delete Lead</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>
+        <LeadsHelpModal isOpen={isHelpModalOpen} onOpenChange={setIsHelpModalOpen} />
+        {isGenerateLeadFromJDOpen && (
+            <GenerateLeadFromJDDialog
+                isOpen={isGenerateLeadFromJDOpen}
+                onOpenChange={setIsGenerateLeadFromJDOpen}
+                onLeadGenerated={handleLeadGeneratedFromAI}
+                user={currentUser}
+                userSettings={userSettings}
+            />
+        )}
+        {isApiKeyDialogOpen && (
+            <ApiKeyDialog
+                isOpen={isApiKeyDialogOpen}
+                onOpenChange={setIsApiKeyDialogOpen}
+                onApiKeySubmit={handleApiKeySubmitted}
+            />
+        )}
       </div>
     </AppLayout>
   );
 }
 
-export default function JobOpeningsPage() {
+export default function LeadsPage() {
   return (
     <Suspense fallback={<AppLayout><div className="flex w-full h-full items-center justify-center"><Loader2 className="h-12 w-12 animate-spin text-primary" /></div></AppLayout>}>
-        <JobOpeningsPageContent />
+        <LeadsPageContent />
     </Suspense>
   )
 }
