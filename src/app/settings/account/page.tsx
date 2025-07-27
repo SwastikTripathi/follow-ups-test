@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
@@ -213,7 +212,7 @@ export default function AccountSettingsPage() {
                                  cadenceDaysSource.length === 3 &&
                                  cadenceDaysSource.every(d => typeof d === 'number');
 
-        const cadenceDays: [number, number, number] = isValidCadenceArray
+        const cadenceDays = isValidCadenceArray
             ? (cadenceDaysSource as [number, number, number])
             : DEFAULT_FOLLOW_UP_CADENCE_DAYS;
 
@@ -264,7 +263,7 @@ export default function AccountSettingsPage() {
         break;
       case 'usage-preferences':
         updatePayload = {
-          follow_up_cadence_days: [values.cadenceFu1, values.cadenceFu2, values.cadenceFu3] as unknown as Json,
+          follow_up_cadence_days: [values.cadenceFu1, values.cadenceFu2, values.cadenceFu3],
         };
         break;
       case 'email-customization':
