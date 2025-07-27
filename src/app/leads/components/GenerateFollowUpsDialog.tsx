@@ -82,8 +82,6 @@ export function GenerateFollowUpsDialog({
       return;
     }
 
-    form.control.getFieldState('jobDescription').isSubmitting = true;
-
     try {
       const genAI = new GoogleGenerativeAI(apiKey);
       const model = genAI.getGenerativeModel({ 
@@ -138,8 +136,6 @@ export function GenerateFollowUpsDialog({
         errorMessage = error.message;
       }
       toast({ title: 'AI Generation Error', description: errorMessage, variant: 'destructive' });
-    } finally {
-        form.control.getFieldState('jobDescription').isSubmitting = false;
     }
   };
 
