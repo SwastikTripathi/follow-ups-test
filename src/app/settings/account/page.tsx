@@ -130,7 +130,7 @@ const sanitizeTemplates = (templates: Json | DefaultFollowUpTemplates | null | u
       openingLine: saneTemplates.followUp2?.openingLine ?? defaults.followUp2.openingLine,
     },
     followUp3: {
-      subject: saneTemplates.followUp3?.subject ?? defaults.followUp3.subject,
+      subject: saneTemplates.followUp3?.subject ?? defaults.followUp3.openingLine,
       openingLine: saneTemplates.followUp3?.openingLine ?? defaults.followUp3.openingLine,
     },
     sharedSignature: saneTemplates.sharedSignature ?? defaults.sharedSignature,
@@ -212,7 +212,7 @@ export default function AccountSettingsPage() {
                                  cadenceDaysSource.length === 3 &&
                                  cadenceDaysSource.every(d => typeof d === 'number');
 
-        const cadenceDays = isValidCadenceArray
+        const cadenceDays: [number, number, number] = isValidCadenceArray
             ? (cadenceDaysSource as [number, number, number])
             : DEFAULT_FOLLOW_UP_CADENCE_DAYS;
 
@@ -399,7 +399,7 @@ export default function AccountSettingsPage() {
      return <AppLayout><Card><CardHeader><CardTitle>Access Denied</CardTitle></CardHeader><CardContent><p>Please log in to access account settings.</p><Button asChild className="mt-4"><Link href="/auth">Sign In</Link></Button></CardContent></Card></AppLayout>;
   }
 
-  const showSkeleton = (isLoadingSettings && !hasFetchedSettingsOnce) || (isSubmitting[activeView] && !hasFetchedSettingsOnce);
+  const showSkeleton = !!((isLoadingSettings && !hasFetchedSettingsOnce) || (isSubmitting[activeView] && !hasFetchedSettingsOnce));
 
 
   return (
@@ -722,7 +722,9 @@ export default function AccountSettingsPage() {
 
 const SkeletonItem: React.FC<{label: string, type?: 'input' | 'select' | 'textarea'}> = ({label, type = 'input'}) => (
   <FormItem>
-    <FormLabel><Label>{label}</Label></FormLabel>
+    <FormLabel><Label>{label}</FormLabel></FormItem>
     <Skeleton className={type === 'textarea' ? "h-20 w-full" : "h-10 w-full"} />
   </FormItem>
 );
+
+    
