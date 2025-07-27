@@ -9,13 +9,13 @@ import { useOnboardingTutorial } from '@/contexts/OnboardingTutorialContext';
 import type { Tour } from 'shepherd.js';
 
 
-const tourOptions: Tour.TourOptions = {
+const tourOptions = {
   defaultStepOptions: {
     cancelIcon: {
       enabled: true,
     },
     classes: 'shadow-md bg-background',
-    scrollTo: { behavior: 'smooth', block: 'center' },
+    scrollTo: { behavior: 'smooth', block: 'center' as ScrollLogicalPosition },
   },
   useModalOverlay: true,
 };
