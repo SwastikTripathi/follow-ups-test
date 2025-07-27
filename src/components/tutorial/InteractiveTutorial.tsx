@@ -13,7 +13,7 @@ const tourOptions = {
       enabled: true,
     },
     classes: 'shadow-md bg-background',
-    scrollTo: { behavior: 'smooth', block: 'center' as ScrollLogicalPosition },
+    scrollTo: { behavior: 'smooth' as ScrollBehavior, block: 'center' as ScrollLogicalPosition },
   },
   useModalOverlay: true,
 };
@@ -25,13 +25,13 @@ const TourController: React.FC<{ onComplete: () => void }> = ({ onComplete }) =>
   useEffect(() => {
     if (startTutorial && tour) {
       tour.start();
-      setStartTutorial(false); 
-      
+      setStartTutorial(false);
+
       const onTourComplete = () => onComplete();
-      
+
       tour.on('complete', onTourComplete);
       tour.on('cancel', onTourComplete);
-      
+
       return () => {
         tour.off('complete', onTourComplete);
         tour.off('cancel', onTourComplete);
