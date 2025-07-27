@@ -6,8 +6,6 @@ import { ShepherdTour, ShepherdTourContext } from 'react-shepherd';
 import 'shepherd.js/dist/css/shepherd.css';
 import { steps } from './tutorial-steps';
 import { useOnboardingTutorial } from '@/contexts/OnboardingTutorialContext';
-import type { Tour } from 'shepherd.js';
-
 
 const tourOptions = {
   defaultStepOptions: {
@@ -50,7 +48,10 @@ interface InteractiveTutorialProps {
 
 export function InteractiveTutorial({ onTutorialComplete }: InteractiveTutorialProps) {
   return (
-    <ShepherdTour steps={steps} tourOptions={tourOptions}>
+    // The 'as any' is a workaround for a mismatch between react-shepherd's Step type
+    // and the underlying shepherd.js library's expectation for attachTo.on.
+    // The custom StepWithTypedAttachment type ensures our steps are correct.
+    <ShepherdTour steps={steps as any} tourOptions={tourOptions}>
       <TourController onComplete={onTutorialComplete} />
     </ShepherdTour>
   );

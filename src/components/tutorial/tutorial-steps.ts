@@ -1,7 +1,32 @@
-
 import type { Step } from 'react-shepherd';
 
-export const steps: Step[] = [
+// Shepherd.js attachTo.on supports these specific placements.
+// Using a specific type union instead of a generic string prevents future errors.
+type PopperPlacement =
+  | 'auto'
+  | 'auto-start'
+  | 'auto-end'
+  | 'top'
+  | 'top-start'
+  | 'top-end'
+  | 'bottom'
+  | 'bottom-start'
+  | 'bottom-end'
+  | 'right'
+  | 'right-start'
+  | 'right-end'
+  | 'left'
+  | 'left-start'
+  | 'left-end';
+
+interface StepWithTypedAttachment extends Omit<Step, 'attachTo'> {
+  attachTo?: {
+    element: string;
+    on: PopperPlacement;
+  };
+}
+
+export const steps: StepWithTypedAttachment[] = [
   {
     id: 'intro',
     attachTo: { element: '#dashboard-main-content-area', on: 'top' },
