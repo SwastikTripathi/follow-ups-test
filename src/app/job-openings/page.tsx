@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { PlusCircle, Search as SearchIcon, Briefcase as BriefcaseIconLucide, Trash2, XCircle, Loader2, Star, Settings, HelpCircle, User as UserIcon, Mail as MailIconLucide, CalendarDays, MessageSquareText, ExternalLink, Copy, MailCheck, Building2 as Building2Icon, Linkedin as LinkedinIcon, Phone as PhoneIcon, Globe as GlobeIcon, Info as InfoIcon, UserCircle2 as UserCircle2Icon, Wand2 } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import type { JobOpening, Company, Contact, FollowUp, UserSettings, DefaultFollowUpTemplates, JobOpeningAssociatedContact, ContactFormEntry, SubscriptionTier, ResumeData } from '@/lib/types';
+import type { JobOpening, Company, Contact, FollowUp, UserSettings, DefaultFollowUpTemplates, JobOpeningAssociatedContact, ContactFormEntry, SubscriptionTier, ResumeData, InitialEmail } from '@/lib/types';
 import { AddJobOpeningDialog, type AddJobOpeningFormValues, DEFAULT_FOLLOW_UP_CADENCE_DAYS } from './components/AddJobOpeningDialog';
 import { EditJobOpeningDialog, type EditJobOpeningFormValues } from './components/EditJobOpeningDialog';
 import { JobOpeningList } from './components/JobOpeningList';
@@ -394,6 +394,7 @@ function JobOpeningsPageContent() {
             } else if (fetchedOpening) {
                 const transformedOpening: JobOpening = {
                     ...fetchedOpening,
+                    initial_email: fetchedOpening.initial_email as InitialEmail | null,
                     status: fetchedOpening.status as JobOpening['status'],
                     tags: fetchedOpening.tags as string[] | null,
                     initial_email_date: startOfDay(new Date(fetchedOpening.initial_email_date)),
@@ -560,7 +561,7 @@ function JobOpeningsPageContent() {
         if (loggedFollowUp) {
             toast({title: 'Follow-up Logged!', description: 'Status updated to Sent.'});
             const currentOpening = jobOpenings.find(jo => jo.id === jobOpeningId);
-            const newStatus = currentOpening ? await determineNewJobOpeningStatusOnServer(jobOpeningId, currentOpening.status as JobOpening['status'], currentUser.id) : null;
+            const newStatus = currentOpening ? await determineNewLeadStatusOnServer(jobOpeningId, currentOpening.status as JobOpening['status'], currentUser.id) : null;
 
             let updatedOpeningForCache: JobOpening | undefined;
             setJobOpenings(prev => prev.map(jo => {
@@ -597,7 +598,7 @@ function JobOpeningsPageContent() {
 
       toast({ title: 'Follow-up Unlogged', description: 'Reverted to pending.' });
       const currentOpening = jobOpenings.find(jo => jo.id === jobOpeningId);
-      const newStatus = currentOpening ? await determineNewJobOpeningStatusOnServer(jobOpeningId, currentOpening.status as JobOpening['status'], currentUser.id) : null;
+      const newStatus = currentOpening ? await determineNewLeadStatusOnServer(jobOpeningId, currentOpening.status as JobOpening['status'], currentUser.id) : null;
 
       let updatedOpeningForCache: JobOpening | undefined;
       setJobOpenings(prev => prev.map(jo => {
@@ -657,6 +658,7 @@ function JobOpeningsPageContent() {
             ...updatedData,
             status: updatedData.status as JobOpening['status'],
             tags: updatedData.tags as string[] | null,
+            initial_email: updatedData.initial_email as InitialEmail | null,
             initial_email_date: startOfDay(new Date(updatedData.initial_email_date)),
             favorited_at: updatedData.favorited_at ? new Date(updatedData.favorited_at) : null,
             associated_contacts: (updatedData.associated_contacts as any[] || []).map(joc => ({
@@ -811,10 +813,10 @@ function JobOpeningsPageContent() {
           </DialogContent></Dialog>
         )}
 
-        <AddJobOpeningDialog isOpen={isAddDialogOpen} onOpenChange={setIsAddDialogOpen} onAddJobOpening={handleAddJobOpening} companies={companies} contacts={contacts} companiesCount={globalCounts.jobOpenings} contactsCount={globalCounts.contacts} jobOpeningsCount={globalCounts.jobOpenings} onAddNewCompany={handleAddNewCompanyToListSupabase} onAddNewContact={handleAddNewContactToListSupabase} defaultEmailTemplates={userSettings?.default_email_templates as DefaultFollowUpTemplates | undefined} prefillData={addDialogPrefill} />
-        {editingOpening && ( <EditJobOpeningDialog isOpen={isEditDialogOpen} onOpenChange={setIsEditDialogOpen} onUpdateJobOpening={handleUpdateJobOpening} openingToEdit={editingOpening} onInitiateDelete={handleInitiateDeleteOpening} companies={companies} contacts={contacts} companiesCount={globalCounts.jobOpenings} contactsCount={globalCounts.contacts} onAddNewCompany={handleAddNewCompanyToListSupabase} onAddNewContact={handleAddNewContactToListSupabase} user={currentUser} userSettings={userSettings}/> )}
-        <AlertDialog open={isDeleteConfirmOpen} onOpenChange={setIsDeleteConfirmOpen}><AlertDialogContent><AlertDialogHeader><ShadAlertDialogTitle>Are you sure?</ShadAlertDialogTitle><AlertDialogDescription>This action cannot be undone. This will permanently delete the lead: <span className="font-semibold"> {openingToDelete?.role_title} at {openingToDelete?.company_name_cache}</span>. All associated follow-up records will also be deleted.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel onClick={() => {setOpeningToDelete(null); setIsDeleteConfirmOpen(false);}}>Cancel</AlertDialogCancel><AlertDialogAction onClick={handleConfirmDeleteOpening} className="bg-destructive hover:bg-destructive/90">Delete Lead</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>
-        <JobOpeningsHelpModal isOpen={isHelpModalOpen} onOpenChange={setIsHelpModalOpen} />
+        <AddLeadDialog isOpen={isAddDialogOpen} onOpenChange={setIsAddDialogOpen} onAddLead={handleAddLead} companies={companies} contacts={contacts} companiesCount={globalCounts.jobOpenings} contactsCount={globalCounts.contacts} jobOpeningsCount={globalCounts.jobOpenings} onAddNewCompany={handleAddNewCompanyToListSupabase} onAddNewContact={handleAddNewContactToListSupabase} defaultEmailTemplates={userSettings?.default_email_templates as DefaultFollowUpTemplates | undefined} prefillData={addDialogPrefill} />
+        {editingLead && ( <EditLeadDialog isOpen={isEditDialogOpen} onOpenChange={setIsEditDialogOpen} onUpdateLead={handleUpdateLead} leadToEdit={editingLead} onInitiateDelete={handleInitiateDeleteLead} companies={companies} contacts={contacts} companiesCount={globalCounts.jobOpenings} contactsCount={globalCounts.contacts} onAddNewCompany={handleAddNewCompanyToListSupabase} onAddNewContact={handleAddNewContactToListSupabase} user={currentUser} userSettings={userSettings}/> )}
+        <AlertDialog open={isDeleteConfirmOpen} onOpenChange={setIsDeleteConfirmOpen}><AlertDialogContent><AlertDialogHeader><ShadAlertDialogTitle>Are you sure?</ShadAlertDialogTitle><AlertDialogDescription>This action cannot be undone. This will permanently delete the lead: <span className="font-semibold"> {leadToDelete?.role_title} at {leadToDelete?.company_name_cache}</span>. All associated follow-up records will also be deleted.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel onClick={() => {setLeadToDelete(null); setIsDeleteConfirmOpen(false);}}>Cancel</AlertDialogCancel><AlertDialogAction onClick={handleConfirmDeleteLead} className="bg-destructive hover:bg-destructive/90">Delete Lead</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>
+        <LeadsHelpModal isOpen={isHelpModalOpen} onOpenChange={setIsHelpModalOpen} />
          {isGenerateLeadFromJDOpen && (
             <GenerateLeadFromJDDialog
                 isOpen={isGenerateLeadFromJDOpen}
@@ -836,10 +838,10 @@ function JobOpeningsPageContent() {
   );
 }
 
-export default function JobOpeningsPage() {
+export default function LeadsPage() {
   return (
     <Suspense fallback={<AppLayout><div className="flex w-full h-full items-center justify-center"><Loader2 className="h-12 w-12 animate-spin text-primary" /></div></AppLayout>}>
-        <JobOpeningsPageContent />
+        <LeadsPageContent />
     </Suspense>
   )
 }

@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { PlusCircle, Search as SearchIcon, Briefcase as BriefcaseIconLucide, Trash2, XCircle, Loader2, Star, HelpCircle, Wand2 } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import type { JobOpening, Company, Contact, FollowUp, UserSettings, DefaultFollowUpTemplates, SubscriptionTier, ResumeData } from '@/lib/types';
+import type { JobOpening, Company, Contact, FollowUp, UserSettings, DefaultFollowUpTemplates, SubscriptionTier, ResumeData, InitialEmail } from '@/lib/types';
 import { AddLeadDialog } from './components/AddLeadDialog';
 import type { AddLeadFormValues, EditLeadFormValues } from './components/shared/leadSchemas';
 import { EditLeadDialog } from './components/EditLeadDialog';
@@ -392,7 +392,7 @@ function LeadsPageContent() {
             } else if (fetchedOpening) {
                 const transformedOpening: JobOpening = {
                     ...fetchedOpening,
-                    initial_email: fetchedOpening.initial_email as any,
+                    initial_email: fetchedOpening.initial_email as InitialEmail | null,
                     status: fetchedOpening.status as JobOpening['status'],
                     tags: fetchedOpening.tags as string[] | null,
                     initial_email_date: startOfDay(new Date(fetchedOpening.initial_email_date)),
@@ -503,7 +503,7 @@ function LeadsPageContent() {
         } else if (fetchedOpening) {
             const transformedOpening: JobOpening = {
                 ...fetchedOpening,
-                initial_email: fetchedOpening.initial_email as any,
+                initial_email: fetchedOpening.initial_email as InitialEmail | null,
                 status: fetchedOpening.status as JobOpening['status'],
                 tags: fetchedOpening.tags as string[] | null,
                 initial_email_date: startOfDay(new Date(fetchedOpening.initial_email_date)),
@@ -654,9 +654,9 @@ function LeadsPageContent() {
     if (updatedData) {
         const transformedOpening: JobOpening = {
             ...updatedData,
-            initial_email: updatedData.initial_email as any,
             status: updatedData.status as JobOpening['status'],
             tags: updatedData.tags as string[] | null,
+            initial_email: updatedData.initial_email as InitialEmail | null,
             initial_email_date: startOfDay(new Date(updatedData.initial_email_date)),
             favorited_at: updatedData.favorited_at ? new Date(updatedData.favorited_at) : null,
             associated_contacts: (updatedData.associated_contacts as any[] || []).map(joc => ({
@@ -815,7 +815,7 @@ function LeadsPageContent() {
         {editingLead && ( <EditLeadDialog isOpen={isEditDialogOpen} onOpenChange={setIsEditDialogOpen} onUpdateLead={handleUpdateLead} leadToEdit={editingLead} onInitiateDelete={handleInitiateDeleteLead} companies={companies} contacts={contacts} companiesCount={globalCounts.jobOpenings} contactsCount={globalCounts.contacts} onAddNewCompany={handleAddNewCompanyToListSupabase} onAddNewContact={handleAddNewContactToListSupabase} user={currentUser} userSettings={userSettings}/> )}
         <AlertDialog open={isDeleteConfirmOpen} onOpenChange={setIsDeleteConfirmOpen}><AlertDialogContent><AlertDialogHeader><ShadAlertDialogTitle>Are you sure?</ShadAlertDialogTitle><AlertDialogDescription>This action cannot be undone. This will permanently delete the lead: <span className="font-semibold"> {leadToDelete?.role_title} at {leadToDelete?.company_name_cache}</span>. All associated follow-up records will also be deleted.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel onClick={() => {setLeadToDelete(null); setIsDeleteConfirmOpen(false);}}>Cancel</AlertDialogCancel><AlertDialogAction onClick={handleConfirmDeleteLead} className="bg-destructive hover:bg-destructive/90">Delete Lead</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>
         <LeadsHelpModal isOpen={isHelpModalOpen} onOpenChange={setIsHelpModalOpen} />
-        {isGenerateLeadFromJDOpen && (
+         {isGenerateLeadFromJDOpen && (
             <GenerateLeadFromJDDialog
                 isOpen={isGenerateLeadFromJDOpen}
                 onOpenChange={setIsGenerateLeadFromJDOpen}
