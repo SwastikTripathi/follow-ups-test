@@ -6,7 +6,7 @@ import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { format } from 'date-fns';
-import { CalendarIcon, Check, ChevronsUpDown, Loader2, Trash2, PlusCircle } from 'lucide-react';
+import { CalendarIcon, Check, ChevronsUpDown, Loader2, Trash2, PlusCircle, Sparkles } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -46,59 +46,13 @@ import { cn } from '@/lib/utils';
 import { useCurrentSubscription } from '@/hooks/use-current-subscription';
 import { getLimitsForTier } from '@/lib/config';
 import { useToast } from '@/hooks/use-toast';
+import { addLeadSchema as addJobOpeningSchema } from '@/app/leads/components/shared/leadSchemas';
+import type { AddLeadFormValues as AddJobOpeningFormValues } from '@/app/leads/components/shared/leadSchemas';
+import { DEFAULT_FOLLOW_UP_CADENCE_DAYS } from '@/lib/config';
 
 
-export const DEFAULT_FOLLOW_UP_CADENCE_DAYS = [7, 14, 21];
+export { addJobOpeningSchema, type AddJobOpeningFormValues, DEFAULT_FOLLOW_UP_CADENCE_DAYS };
 
-const contactEntrySchema = z.object({
-  contact_id: z.string().optional(),
-  contactName: z.string().min(1, "Contact name is required"),
-  contactEmail: z.string().email("Invalid email address").optional().or(z.literal('')),
-  linkedin_url: z.string().url("Must be a valid LinkedIn URL").optional().or(z.literal('')),
-  phone: z.string().min(5, "Phone number is too short").optional().or(z.literal('')),
-}).superRefine((data, ctx) => {
-  const emailProvided = data.contactEmail && data.contactEmail.trim() !== '';
-  const linkedinProvided = data.linkedin_url && data.linkedin_url.trim() !== '';
-  const phoneProvided = data.phone && data.phone.trim() !== '';
-
-  if (!emailProvided && !linkedinProvided && !phoneProvided) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      message: "Please provide at least an email, LinkedIn URL, or phone number for the contact.",
-      path: ["contactEmail"],
-    });
-     ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      message: "At least one contact method is required.",
-      path: ["linkedin_url"],
-    });
-     ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      message: "At least one contact method is required.",
-      path: ["phone"],
-    });
-  }
-});
-
-const followUpContentSchema = z.object({
-  subject: z.string().max(255, "Subject cannot exceed 255 characters.").optional(),
-  body: z.string().max(5000, "Body cannot exceed 5000 characters.").optional(),
-});
-
-const addJobOpeningSchema = z.object({
-  companyName: z.string().min(1, "Company name is required"),
-  company_id: z.string().optional(),
-  roleTitle: z.string().min(1, "Lead / Role title is required"),
-  contacts: z.array(contactEntrySchema).min(1, "At least one contact is required."),
-  initialEmailDate: z.date({ invalid_type_error: "Initial email date is required." }).default(() => new Date()),
-  jobDescriptionUrl: z.string().url("Must be a valid URL").optional().or(z.literal('')),
-  notes: z.string().optional(),
-  followUp1: followUpContentSchema,
-  followUp2: followUpContentSchema,
-  followUp3: followUpContentSchema,
-});
-
-export type AddJobOpeningFormValues = z.infer<typeof addJobOpeningSchema>;
 
 interface AddJobOpeningDialogProps {
   isOpen: boolean;
@@ -112,6 +66,7 @@ interface AddJobOpeningDialogProps {
   onAddNewCompany: (companyName: string) => Promise<Company | null>; 
   onAddNewContact: (contactName: string, contactEmail?: string, companyId?: string, companyName?: string, linkedinUrl?: string, phone?: string) => Promise<Contact | null>;
   defaultEmailTemplates?: DefaultFollowUpTemplates;
+  prefillData?: Partial<AddJobOpeningFormValues>;
 }
 
 const getDefaultFollowUpValues = (template?: FollowUpTemplateContent, sharedSignature?: string) => {
@@ -135,6 +90,7 @@ export function AddJobOpeningDialog({
   onAddNewCompany, 
   onAddNewContact,
   defaultEmailTemplates,
+  prefillData,
 }: AddJobOpeningDialogProps) {
   const [companyPopoverOpen, setCompanyPopoverOpen] = useState(false);
   const [companySearchInput, setCompanySearchInput] = useState('');
@@ -153,6 +109,7 @@ export function AddJobOpeningDialog({
       roleTitle: '',
       contacts: [{ contactName: '', contactEmail: '', contact_id: '', linkedin_url: '', phone: '' }],
       initialEmailDate: new Date(),
+      initialEmail: { subject: '', body: '' },
       jobDescriptionUrl: '',
       notes: '',
       followUp1: getDefaultFollowUpValues(defaultEmailTemplates?.followUp1, defaultEmailTemplates?.sharedSignature),
@@ -168,23 +125,26 @@ export function AddJobOpeningDialog({
 
   useEffect(() => {
     if (isOpen) {
-      form.reset({
-        companyName: '',
-        company_id: '',
-        roleTitle: '',
-        contacts: [{ contactName: '', contactEmail: '', contact_id: '', linkedin_url: '', phone: '' }],
-        initialEmailDate: new Date(),
-        jobDescriptionUrl: '',
-        notes: '',
-        followUp1: getDefaultFollowUpValues(defaultEmailTemplates?.followUp1, defaultEmailTemplates?.sharedSignature),
-        followUp2: getDefaultFollowUpValues(defaultEmailTemplates?.followUp2, defaultEmailTemplates?.sharedSignature),
-        followUp3: getDefaultFollowUpValues(defaultEmailTemplates?.followUp3, defaultEmailTemplates?.sharedSignature),
-      });
-      setCompanySearchInput('');
-      setContactPopoverStates([false]);
-      setContactSearchInputs(['']);
+      const initialValues = {
+        companyName: prefillData?.companyName || '',
+        company_id: prefillData?.company_id || '',
+        roleTitle: prefillData?.roleTitle || '',
+        contacts: prefillData?.contacts || [{ contactName: '', contactEmail: '', contact_id: '', linkedin_url: '', phone: '' }],
+        initialEmailDate: prefillData?.initialEmailDate || new Date(),
+        initialEmail: prefillData?.initialEmail || { subject: '', body: '' },
+        jobDescriptionUrl: prefillData?.jobDescriptionUrl || '',
+        notes: prefillData?.notes || '',
+        followUp1: prefillData?.followUp1 || getDefaultFollowUpValues(defaultEmailTemplates?.followUp1, defaultEmailTemplates?.sharedSignature),
+        followUp2: prefillData?.followUp2 || getDefaultFollowUpValues(defaultEmailTemplates?.followUp2, defaultEmailTemplates?.sharedSignature),
+        followUp3: prefillData?.followUp3 || getDefaultFollowUpValues(defaultEmailTemplates?.followUp3, defaultEmailTemplates?.sharedSignature),
+      };
+      form.reset(initialValues);
+
+      setCompanySearchInput(prefillData?.companyName || '');
+      setContactPopoverStates( (prefillData?.contacts || [false]).map(()=>false) );
+      setContactSearchInputs( (prefillData?.contacts || ['']).map((c: any) => c.contactName || '') );
     }
-  }, [isOpen, defaultEmailTemplates, form]);
+  }, [isOpen, defaultEmailTemplates, form, prefillData]);
 
   useEffect(() => {
     if (isOpen) {
@@ -465,7 +425,7 @@ export function AddJobOpeningDialog({
                         name={`contacts.${index}.contactName`}
                         render={({ field }) => (
                         <FormItem>
-                            <div className="flex justify-between"> {/* Removed items-center */}
+                            <div className="flex justify-between">
                                 <FormLabel>Contact Person {index + 1}</FormLabel>
                                 {contactFields.length > 1 ? (
                                     <Button
@@ -600,9 +560,9 @@ export function AddJobOpeningDialog({
                         name={`contacts.${index}.contactEmail`}
                         render={({ field }) => (
                         <FormItem>
-                             <div className="flex justify-between"> {/* Removed items-center */}
+                             <div className="flex justify-between">
                                 <FormLabel>Contact Email {index + 1}</FormLabel>
-                                <div className="h-7 w-7 shrink-0" /> {/* Placeholder */}
+                                <div className="h-7 w-7 shrink-0" /> 
                             </div>
                             <FormControl>
                                 <Input type="email" placeholder="e.g. jane.doe@example.com" {...field} />
@@ -616,9 +576,9 @@ export function AddJobOpeningDialog({
                         name={`contacts.${index}.linkedin_url`}
                         render={({ field }) => (
                         <FormItem>
-                            <div className="flex justify-between"> {/* Removed items-center */}
+                            <div className="flex justify-between">
                                 <FormLabel>LinkedIn URL (Optional)</FormLabel>
-                                <div className="h-7 w-7 shrink-0" /> {/* Placeholder */}
+                                <div className="h-7 w-7 shrink-0" />
                             </div>
                             <FormControl>
                                 <Input placeholder="https://linkedin.com/in/janedoe" {...field} />
@@ -632,9 +592,9 @@ export function AddJobOpeningDialog({
                         name={`contacts.${index}.phone`}
                         render={({ field }) => (
                         <FormItem>
-                            <div className="flex justify-between"> {/* Removed items-center */}
+                            <div className="flex justify-between">
                                 <FormLabel>Phone Number (Optional)</FormLabel>
-                                <div className="h-7 w-7 shrink-0" /> {/* Placeholder */}
+                                <div className="h-7 w-7 shrink-0" />
                             </div>
                             <FormControl>
                                 <Input type="tel" placeholder="e.g. +1 234 567 8900" {...field} />
@@ -692,7 +652,7 @@ export function AddJobOpeningDialog({
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>URL (Optional)</FormLabel>
-                    <FormControl><Input placeholder="https://example.com/deal/123" {...field} /></FormControl>
+                    <FormControl><Input placeholder="e.g. Job Posting, Deal link" {...field} /></FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -705,15 +665,41 @@ export function AddJobOpeningDialog({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Notes (Optional)</FormLabel>
-                  <FormControl><Textarea placeholder="Any additional notes..." {...field} rows={3}/></FormControl>
+                  <FormControl><Textarea placeholder="Paste job description or any other notes..." {...field} rows={3}/></FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
+            
+            <div className="space-y-6 pt-2">
+              <div className="space-y-2 p-4 border rounded-md shadow-sm">
+                <h4 className="text-md font-semibold text-primary">Initial Email Draft</h4>
+                <FormField
+                  control={form.control}
+                  name="initialEmail.subject"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Subject</FormLabel>
+                      <FormControl><Input placeholder="Subject for your initial email" {...field} /></FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="initialEmail.body"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Body</FormLabel>
+                      <FormControl><Textarea placeholder="Body for your initial email..." {...field} rows={4} /></FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
 
-            <div className="space-y-6">
               {(['followUp1', 'followUp2', 'followUp3'] as const).map((key, index) => {
-                const num = index + 1;
+                const num = index + 1 as 1 | 2 | 3;
                 return (
                   <div key={key} className="space-y-2 p-4 border rounded-md shadow-sm">
                     <h4 className="text-md font-semibold text-primary">{num === 1 ? '1st' : num === 2 ? '2nd' : '3rd'} Follow-Up draft</h4>

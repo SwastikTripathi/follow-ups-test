@@ -6,9 +6,9 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { PlusCircle, Search as SearchIcon, Briefcase as BriefcaseIconLucide, Trash2, XCircle, Loader2, Star, Settings, HelpCircle, User as UserIcon, Mail as MailIconLucide, CalendarDays, MessageSquareText, ExternalLink, Copy, MailCheck, Building2 as Building2Icon, Linkedin as LinkedinIcon, Phone as PhoneIcon, Globe as GlobeIcon, Info as InfoIcon, UserCircle2 as UserCircle2Icon } from 'lucide-react';
+import { PlusCircle, Search as SearchIcon, Briefcase as BriefcaseIconLucide, Trash2, XCircle, Loader2, Star, Settings, HelpCircle, User as UserIcon, Mail as MailIconLucide, CalendarDays, MessageSquareText, ExternalLink, Copy, MailCheck, Building2 as Building2Icon, Linkedin as LinkedinIcon, Phone as PhoneIcon, Globe as GlobeIcon, Info as InfoIcon, UserCircle2 as UserCircle2Icon, Wand2 } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import type { JobOpening, Company, Contact, FollowUp, UserSettings, DefaultFollowUpTemplates, JobOpeningAssociatedContact, ContactFormEntry, SubscriptionTier } from '@/lib/types';
+import type { JobOpening, Company, Contact, FollowUp, UserSettings, DefaultFollowUpTemplates, JobOpeningAssociatedContact, ContactFormEntry, SubscriptionTier, ResumeData } from '@/lib/types';
 import { AddJobOpeningDialog, type AddJobOpeningFormValues, DEFAULT_FOLLOW_UP_CADENCE_DAYS } from './components/AddJobOpeningDialog';
 import { EditJobOpeningDialog, type EditJobOpeningFormValues } from './components/EditJobOpeningDialog';
 import { JobOpeningList } from './components/JobOpeningList';
@@ -44,6 +44,9 @@ import { useCounts } from '@/contexts/CountsContext';
 import { useUserSettings } from '@/contexts/UserSettingsContext';
 import { useUserDataCache } from '@/contexts/UserDataCacheContext';
 import { JobOpeningsHelpModal } from '@/app/job-openings/components/JobOpeningsHelpModal';
+import { useGeminiApiKey } from '@/hooks/useGeminiApiKey';
+import { ApiKeyDialog } from '@/app/leads/components/ApiKeyDialog';
+import { GenerateLeadFromJDDialog } from '@/app/leads/components/GenerateLeadFromJDDialog';
 
 
 type SortOptionValue = 'nextFollowUpDate_asc' | 'initialEmailDate_desc' | 'initialEmailDate_asc';
@@ -102,11 +105,16 @@ function JobOpeningsPageContent() {
   const [openingToDelete, setOpeningToDelete] = useState<JobOpening | null>(null);
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
   const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
+  const [addDialogPrefill, setAddDialogPrefill] = useState<Partial<AddJobOpeningFormValues> | undefined>(undefined);
+  const [isGenerateLeadFromJDOpen, setIsGenerateLeadFromJDOpen] = useState(false);
 
   const { toast } = useToast();
   const searchParams = useSearchParams();
   const [focusedOpening, setFocusedOpening] = useState<JobOpening | null>(null);
   const focusedOpeningIdFromUrl = searchParams?.get('view');
+  
+  const { apiKey, setApiKey, isLoaded: isApiKeyLoaded } = useGeminiApiKey();
+  const [isApiKeyDialogOpen, setIsApiKeyDialogOpen] = useState(false);
 
   const {
     effectiveLimits, // Changed from effectiveTierForLimits
@@ -127,6 +135,31 @@ function JobOpeningsPageContent() {
       setContacts([]);
     }
   }, [currentUser, initialAuthCheckCompleted, isLoadingCache, initialCacheLoadAttempted, cachedData]);
+  
+  const handleAddWithAIClick = () => {
+    if (!isApiKeyLoaded) return;
+    if (!apiKey) {
+      setIsApiKeyDialogOpen(true);
+    } else {
+      setIsGenerateLeadFromJDOpen(true);
+    }
+  };
+
+  const handleApiKeySubmitted = (newApiKey: string) => {
+    setApiKey(newApiKey);
+    setIsApiKeyDialogOpen(false);
+    toast({ title: 'API Key Saved!', description: 'Your key is saved. You can now use AI features.'});
+    // Now open the AI dialog
+    setIsGenerateLeadFromJDOpen(true);
+  };
+
+  const handleLeadGeneratedFromAI = (prefillData: Partial<AddJobOpeningFormValues>) => {
+    setAddDialogPrefill({
+        ...prefillData,
+        notes: '', // Ensure notes field is blank
+    });
+    setIsAddDialogOpen(true);
+  };
 
   const handleAddOpeningClick = useCallback(() => {
     if (!currentUser || subscriptionLoading || isLoadingUserAuth || !initialAuthCheckCompleted) {
@@ -143,6 +176,7 @@ function JobOpeningsPageContent() {
       toast({ title: 'Limit Reached', description: message, variant: 'destructive' });
       return;
     }
+    setAddDialogPrefill(undefined);
     setIsAddDialogOpen(true);
   }, [currentUser, subscriptionLoading, effectiveLimits, globalCounts.jobOpenings, toast, isInGracePeriod, setIsAddDialogOpen, isLoadingUserAuth, initialAuthCheckCompleted]);
 
@@ -711,7 +745,7 @@ function JobOpeningsPageContent() {
                 { !isApiKeyLoaded ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Wand2 className="mr-2 h-4 w-4" /> }
                 Add with AI
              </Button>
-            <Button onClick={handleAddLeadClick} disabled={isAddButtonDisabled} id="add-new-lead-button">
+            <Button onClick={handleAddOpeningClick} disabled={isAddButtonDisabled} id="add-new-lead-button">
                 <PlusCircle className="mr-2 h-4 w-4" /> Add New Lead
             </Button>
             <Button variant="outline" size="icon" className="rounded-full hover:bg-background hover:text-foreground hidden sm:inline-flex" onClick={() => setIsHelpModalOpen(true)} disabled={!currentUser || isLoadingUserAuth}>
@@ -764,24 +798,24 @@ function JobOpeningsPageContent() {
         ) : focusedLead ? null : (
           sortOption === 'nextFollowUpDate_asc' ? (
             <>
-              {actionRequiredLeads.length > 0 && ( <div className="space-y-3"> <h3 className="text-xl font-semibold text-foreground/90 font-headline">Due Today / Overdue</h3> <LeadList leads={actionRequiredLeads} onEditLead={handleEditLead} onLogFollowUp={handleLogFollowUp} onUnlogFollowUp={handleUnlogFollowUp} onToggleFavorite={handleToggleFavorite} /> </div> )}
+              {actionRequiredLeads.length > 0 && ( <div className="space-y-3"> <h3 className="text-xl font-semibold text-foreground/90 font-headline">Due Today / Overdue</h3> <JobOpeningList jobOpenings={actionRequiredLeads} onEditOpening={handleEditOpening} onLogFollowUp={handleLogFollowUp} onUnlogFollowUp={handleUnlogFollowUp} onToggleFavorite={handleToggleFavorite} /> </div> )}
               {actionRequiredLeads.length > 0 && otherLeads.length > 0 && ( <Separator className="my-6" /> )}
-              {otherLeads.length > 0 && ( <div className="space-y-3"> <h3 className="text-xl font-semibold text-foreground/90 font-headline">Upcoming Follow-ups</h3> <LeadList leads={otherLeads} onEditLead={handleEditLead} onLogFollowUp={handleLogFollowUp} onUnlogFollowUp={handleUnlogFollowUp} onToggleFavorite={handleToggleFavorite} /> </div> )}
+              {otherLeads.length > 0 && ( <div className="space-y-3"> <h3 className="text-xl font-semibold text-foreground/90 font-headline">Upcoming Follow-ups</h3> <JobOpeningList jobOpenings={otherLeads} onEditOpening={handleEditOpening} onLogFollowUp={handleLogFollowUp} onUnlogFollowUp={handleUnlogFollowUp} onToggleFavorite={handleToggleFavorite} /> </div> )}
             </>
-          ) : ( <LeadList leads={allFilteredAndSortedLeads} onEditLead={handleEditLead} onLogFollowUp={handleLogFollowUp} onUnlogFollowUp={handleUnlogFollowUp} onToggleFavorite={handleToggleFavorite} /> )
+          ) : ( <JobOpeningList jobOpenings={allFilteredAndSortedLeads} onEditOpening={handleEditOpening} onLogFollowUp={handleLogFollowUp} onUnlogFollowUp={handleUnlogFollowUp} onToggleFavorite={handleToggleFavorite} /> )
         )}
 
         {focusedLead && (
           <Dialog open={!!focusedLead} onOpenChange={(open) => { if (!open) handleCloseFocusedLeadDialog(); }}><DialogContent className="sm:max-w-xl p-0 border-0 shadow-2xl bg-transparent data-[state=open]:sm:zoom-in-90 data-[state=closed]:sm:zoom-out-90"><DialogHeader className="sr-only"><DialogTitle>{focusedLead.role_title}</DialogTitle><DialogDescription>Details for {focusedLead.role_title} at {focusedLead.company_name_cache}</DialogDescription></DialogHeader>
-              <LeadCard lead={focusedLead} onEdit={() => { handleCloseFocusedLeadDialog(); handleEditLead(focusedLead); }} onLogFollowUp={handleLogFollowUp} onUnlogFollowUp={handleUnlogFollowUp} onToggleFavorite={async (id, isFav) => { await handleToggleFavorite(id, isFav); const updatedFocusedLead = jobOpenings.find(op => op.id === id); if (updatedFocusedLead) setFocusedLead(updatedFocusedLead); else handleCloseFocusedLeadDialog(); }} isFocusedView={true} />
+              <JobOpeningCard opening={focusedLead} onEdit={() => { handleCloseFocusedLeadDialog(); handleEditOpening(focusedLead); }} onLogFollowUp={handleLogFollowUp} onUnlogFollowUp={handleUnlogFollowUp} onToggleFavorite={async (id, isFav) => { await handleToggleFavorite(id, isFav); const updatedFocusedLead = jobOpenings.find(op => op.id === id); if (updatedFocusedLead) setFocusedLead(updatedFocusedLead); else handleCloseFocusedLeadDialog(); }} isFocusedView={true} />
           </DialogContent></Dialog>
         )}
 
-        <AddLeadDialog isOpen={isAddDialogOpen} onOpenChange={setIsAddDialogOpen} onAddLead={handleAddLead} companies={companies} contacts={contacts} companiesCount={globalCounts.jobOpenings} contactsCount={globalCounts.contacts} jobOpeningsCount={globalCounts.jobOpenings} onAddNewCompany={handleAddNewCompanyToListSupabase} onAddNewContact={handleAddNewContactToListSupabase} defaultEmailTemplates={userSettings?.default_email_templates as DefaultFollowUpTemplates | undefined} prefillData={addDialogPrefill} />
-        {editingLead && ( <EditLeadDialog isOpen={isEditDialogOpen} onOpenChange={setIsEditDialogOpen} onUpdateLead={handleUpdateLead} leadToEdit={editingLead} onInitiateDelete={handleInitiateDeleteLead} companies={companies} contacts={contacts} companiesCount={globalCounts.jobOpenings} contactsCount={globalCounts.contacts} onAddNewCompany={handleAddNewCompanyToListSupabase} onAddNewContact={handleAddNewContactToListSupabase} user={currentUser} userSettings={userSettings}/> )}
-        <AlertDialog open={isDeleteConfirmOpen} onOpenChange={setIsDeleteConfirmOpen}><AlertDialogContent><AlertDialogHeader><ShadAlertDialogTitle>Are you sure?</ShadAlertDialogTitle><AlertDialogDescription>This action cannot be undone. This will permanently delete the lead: <span className="font-semibold"> {leadToDelete?.role_title} at {leadToDelete?.company_name_cache}</span>. All associated follow-up records will also be deleted.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel onClick={() => {setLeadToDelete(null); setIsDeleteConfirmOpen(false);}}>Cancel</AlertDialogCancel><AlertDialogAction onClick={handleConfirmDeleteLead} className="bg-destructive hover:bg-destructive/90">Delete Lead</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>
-        <LeadsHelpModal isOpen={isHelpModalOpen} onOpenChange={setIsHelpModalOpen} />
-        {isGenerateLeadFromJDOpen && (
+        <AddJobOpeningDialog isOpen={isAddDialogOpen} onOpenChange={setIsAddDialogOpen} onAddJobOpening={handleAddJobOpening} companies={companies} contacts={contacts} companiesCount={globalCounts.jobOpenings} contactsCount={globalCounts.contacts} jobOpeningsCount={globalCounts.jobOpenings} onAddNewCompany={handleAddNewCompanyToListSupabase} onAddNewContact={handleAddNewContactToListSupabase} defaultEmailTemplates={userSettings?.default_email_templates as DefaultFollowUpTemplates | undefined} prefillData={addDialogPrefill} />
+        {editingOpening && ( <EditJobOpeningDialog isOpen={isEditDialogOpen} onOpenChange={setIsEditDialogOpen} onUpdateJobOpening={handleUpdateJobOpening} openingToEdit={editingOpening} onInitiateDelete={handleInitiateDeleteOpening} companies={companies} contacts={contacts} companiesCount={globalCounts.jobOpenings} contactsCount={globalCounts.contacts} onAddNewCompany={handleAddNewCompanyToListSupabase} onAddNewContact={handleAddNewContactToListSupabase} user={currentUser} userSettings={userSettings}/> )}
+        <AlertDialog open={isDeleteConfirmOpen} onOpenChange={setIsDeleteConfirmOpen}><AlertDialogContent><AlertDialogHeader><ShadAlertDialogTitle>Are you sure?</ShadAlertDialogTitle><AlertDialogDescription>This action cannot be undone. This will permanently delete the lead: <span className="font-semibold"> {openingToDelete?.role_title} at {openingToDelete?.company_name_cache}</span>. All associated follow-up records will also be deleted.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel onClick={() => {setOpeningToDelete(null); setIsDeleteConfirmOpen(false);}}>Cancel</AlertDialogCancel><AlertDialogAction onClick={handleConfirmDeleteOpening} className="bg-destructive hover:bg-destructive/90">Delete Lead</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>
+        <JobOpeningsHelpModal isOpen={isHelpModalOpen} onOpenChange={setIsHelpModalOpen} />
+         {isGenerateLeadFromJDOpen && (
             <GenerateLeadFromJDDialog
                 isOpen={isGenerateLeadFromJDOpen}
                 onOpenChange={setIsGenerateLeadFromJDOpen}
@@ -802,10 +836,10 @@ function JobOpeningsPageContent() {
   );
 }
 
-export default function LeadsPage() {
+export default function JobOpeningsPage() {
   return (
     <Suspense fallback={<AppLayout><div className="flex w-full h-full items-center justify-center"><Loader2 className="h-12 w-12 animate-spin text-primary" /></div></AppLayout>}>
-        <LeadsPageContent />
+        <JobOpeningsPageContent />
     </Suspense>
   )
 }

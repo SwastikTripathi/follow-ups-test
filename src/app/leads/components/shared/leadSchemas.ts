@@ -44,7 +44,7 @@ export const addLeadSchema = z.object({
   initialEmailDate: z.date({ invalid_type_error: "Initial email date is required." }).default(() => new Date()),
   initialEmail: emailContentSchema,
   jobDescriptionUrl: z.string().url("Must be a valid URL").max(2048, "URL is too long.").optional().or(z.literal('')),
-  notes: z.string().max(300, "Notes cannot exceed 300 characters.").optional(),
+  notes: z.string().max(5000, "Notes cannot exceed 5000 characters.").optional(),
   followUp1: emailContentSchema,
   followUp2: emailContentSchema,
   followUp3: emailContentSchema,

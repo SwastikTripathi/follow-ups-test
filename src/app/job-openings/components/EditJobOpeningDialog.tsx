@@ -6,7 +6,8 @@ import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { format, isValid, isBefore, startOfDay, add } from 'date-fns';
-import { CalendarIcon, Check, ChevronsUpDown, Loader2, Trash2, PlusCircle, Mail, MailCheck, AlertTriangle, CalendarClock, XCircle } from 'lucide-react';
+import { CalendarIcon, Check, ChevronsUpDown, Loader2, Trash2, PlusCircle, Mail, MailCheck, AlertTriangle, CalendarClock, XCircle, Sparkles } from 'lucide-react';
+import type { User } from '@supabase/supabase-js';
 
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -16,76 +17,25 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Textarea } from '@/components/ui/textarea';
-import type { JobOpening, Company, Contact, ContactFormEntry, FollowUp } from '@/lib/types';
+import type { JobOpening, Company, Contact, ContactFormEntry, UserSettings, ResumeData } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useCurrentSubscription } from '@/hooks/use-current-subscription';
 import { getLimitsForTier } from '@/lib/config';
 import { useToast } from '@/hooks/use-toast';
+import { editLeadSchema as editJobOpeningSchema } from '@/app/leads/components/shared/leadSchemas';
+import type { EditLeadFormValues as EditJobOpeningFormValues } from '@/app/leads/components/shared/leadSchemas';
+import { useGeminiApiKey } from '@/hooks/useGeminiApiKey';
+import { ApiKeyDialog } from '@/app/leads/components/ApiKeyDialog';
+import { generateInitialEmail, generateSingleFollowUp } from '@/lib/ai/client';
+import { useUserDataCache } from '@/contexts/UserDataCacheContext';
 
-const contactEntrySchema = z.object({
-  contact_id: z.string().optional(),
-  contactName: z.string().min(1, "Contact name is required"),
-  contactEmail: z.string().email("Invalid email address").optional().or(z.literal('')),
-  linkedin_url: z.string().url("Must be a valid LinkedIn URL").optional().or(z.literal('')),
-  phone: z.string().min(5, "Phone number is too short").optional().or(z.literal('')),
-}).superRefine((data, ctx) => {
-  const emailProvided = data.contactEmail && data.contactEmail.trim() !== '';
-  const linkedinProvided = data.linkedin_url && data.linkedin_url.trim() !== '';
-  const phoneProvided = data.phone && data.phone.trim() !== '';
 
-  if (!emailProvided && !linkedinProvided && !phoneProvided) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      message: "Please provide at least an email, LinkedIn URL, or phone number for the contact.",
-      path: ["contactEmail"], 
-    });
-     ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      message: "At least one contact method is required.",
-      path: ["linkedin_url"],
-    });
-     ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      message: "At least one contact method is required.",
-      path: ["phone"],
-    });
-  }
-});
-
-const followUpContentSchema = z.object({
-  subject: z.string().max(255, "Subject cannot exceed 255 characters.").optional(),
-  body: z.string().max(5000, "Body cannot exceed 5000 characters.").optional(),
-});
-
-const editJobOpeningSchema = z.object({
-  companyName: z.string().min(1, "Company name is required"),
-  company_id: z.string().optional(),
-  roleTitle: z.string().min(1, "Lead / Role title is required"),
-  contacts: z.array(contactEntrySchema).min(1, "At least one contact is required."),
-  initialEmailDate: z.date({ required_error: "Initial email date is required" }),
-  jobDescriptionUrl: z.string().url("Must be a valid URL").optional().or(z.literal('')),
-  notes: z.string().optional(),
-  followUp1: followUpContentSchema,
-  followUp2: followUpContentSchema,
-  followUp3: followUpContentSchema,
-  status: z.enum(['Watching', 'Applied', 'Emailed', 'Followed Up - Once', 'Followed Up - Twice', 'Followed Up - Thrice', 'No Response', 'Replied - Positive', 'Replied - Negative', 'Interviewing', 'Offer', 'Rejected', 'Closed']),
-});
-
-export type EditJobOpeningFormValues = z.infer<typeof editJobOpeningSchema>;
-
-interface EditJobOpeningDialogProps {
-  isOpen: boolean;
-  onOpenChange: (isOpen: boolean) => void;
-  onUpdateJobOpening: (values: EditJobOpeningFormValues, openingId: string) => Promise<void>;
-  openingToEdit: JobOpening | null;
-  onInitiateDelete: (opening: JobOpening) => void;
-  companies: Company[];
-  contacts: Contact[];
-  companiesCount: number;
-  contactsCount: number;
-  onAddNewCompany: (companyName: string) => Promise<Company | null>;
-  onAddNewContact: (contactName: string, contactEmail?: string, companyId?: string, companyName?: string, linkedinUrl?:string, phone?: string) => Promise<Contact | null>;
+interface TimelineEvent {
+  date: Date;
+  description: string;
+  isOccurred: boolean;
+  type: 'initial_email' | 'follow_up_1' | 'follow_up_2' | 'follow_up_3';
 }
 
 const JOB_STATUSES: JobOpening['status'][] = [
@@ -95,13 +45,7 @@ const JOB_STATUSES: JobOpening['status'][] = [
     'Interviewing', 'Offer', 'Rejected', 'Closed'
 ];
 
-interface TimelineEvent {
-  date: Date;
-  description: string;
-  isOccurred: boolean;
-  type: 'initial_email' | 'follow_up_1' | 'follow_up_2' | 'follow_up_3';
-}
-
+export { editJobOpeningSchema, type EditJobOpeningFormValues };
 
 export function EditJobOpeningDialog({
     isOpen,
@@ -115,7 +59,23 @@ export function EditJobOpeningDialog({
     contactsCount,
     onAddNewCompany,
     onAddNewContact,
-}: EditJobOpeningDialogProps) {
+    user,
+    userSettings,
+}: {
+    isOpen: boolean;
+    onOpenChange: (isOpen: boolean) => void;
+    onUpdateJobOpening: (values: EditJobOpeningFormValues, openingId: string) => Promise<void>;
+    openingToEdit: JobOpening | null;
+    onInitiateDelete: (opening: JobOpening) => void;
+    companies: Company[];
+    contacts: Contact[];
+    companiesCount: number;
+    contactsCount: number;
+    onAddNewCompany: (companyName: string) => Promise<Company | null>;
+    onAddNewContact: (contactName: string, contactEmail?: string, companyId?: string, companyName?: string, linkedinUrl?:string, phone?: string) => Promise<Contact | null>;
+    user: User | null;
+    userSettings: UserSettings | null;
+}) {
   const [companyPopoverOpen, setCompanyPopoverOpen] = useState(false);
   const [companySearchInput, setCompanySearchInput] = useState('');
 
@@ -124,6 +84,10 @@ export function EditJobOpeningDialog({
   const [timelineEvents, setTimelineEvents] = useState<TimelineEvent[]>([]);
   const { toast } = useToast();
   const { effectiveLimits, isInGracePeriod, subscriptionLoading } = useCurrentSubscription();
+  const { apiKey, setApiKey, isLoaded: isApiKeyLoaded } = useGeminiApiKey();
+  const [isApiKeyDialogOpen, setIsApiKeyDialogOpen] = useState(false);
+  const [isGenerating, setIsGenerating] = useState<number | null>(null);
+  const { incrementCachedAiUsage } = useUserDataCache();
 
   const form = useForm<EditJobOpeningFormValues>({
     resolver: zodResolver(editJobOpeningSchema),
@@ -156,6 +120,7 @@ export function EditJobOpeningDialog({
             roleTitle: op.role_title,
             contacts: formContacts,
             initialEmailDate: typeof op.initial_email_date === 'string' ? new Date(op.initial_email_date) : op.initial_email_date || new Date(),
+            initialEmail: op.initial_email || { subject: '', body: ''},
             jobDescriptionUrl: op.job_description_url || '',
             notes: op.notes || '',
             followUp1: {
@@ -181,6 +146,7 @@ export function EditJobOpeningDialog({
             companyName: '', company_id: '', roleTitle: '',
             contacts: [{ contactName: '', contactEmail: '', contact_id: '', linkedin_url: '', phone: '' }],
             initialEmailDate: new Date(), jobDescriptionUrl: '', notes: '',
+            initialEmail: { subject: '', body: '' },
             followUp1: { subject: '', body: '' },
             followUp2: { subject: '', body: '' },
             followUp3: { subject: '', body: '' },
@@ -272,11 +238,7 @@ export function EditJobOpeningDialog({
         (values.company_id !== openingToEdit.company_id || values.companyName !== openingToEdit.company_name_cache);
 
     if (isCreatingNewCompanyForEdit && companiesCount >= effectiveLimits.companies) {
-      limitMessage = `Cannot assign to new company "${values.companyName}" as you have reached the limit of ${effectiveLimits.companies} companies.`;
-      if (isInGracePeriod) {
-        limitMessage = `Your premium plan has expired. Cannot assign to new company "${values.companyName}" as you've reached the Free Tier limit of ${effectiveLimits.companies} companies.`;
-      }
-      toast({ title: 'Company Limit Reached', description: limitMessage, variant: 'destructive' });
+      toast({ title: 'Company Limit Reached', description: `Cannot assign to new company "${values.companyName}" as you have reached the limit of ${effectiveLimits.companies} companies.`, variant: 'destructive' });
       return;
     }
     
@@ -286,11 +248,7 @@ export function EditJobOpeningDialog({
 
 
     if (netNewContactsToAdd > 0 && (contactsCount + netNewContactsToAdd) > effectiveLimits.contacts) {
-       limitMessage = `Adding ${netNewContactsToAdd} new contact(s) would exceed your limit of ${effectiveLimits.contacts} contacts.`;
-       if (isInGracePeriod) {
-        limitMessage = `Your premium plan has expired. Adding ${netNewContactsToAdd} new contact(s) would exceed your Free Tier limit of ${effectiveLimits.contacts} contacts.`;
-      }
-      toast({ title: 'Contact Limit Reached', description: limitMessage, variant: 'destructive' });
+       toast({ title: 'Contact Limit Reached', description: `Adding ${netNewContactsToAdd} new contact(s) would exceed your limit of ${effectiveLimits.contacts} contacts.`, variant: 'destructive' });
       return;
     }
 
@@ -305,6 +263,80 @@ export function EditJobOpeningDialog({
 
   const handleDialogCancel = () => {
     onOpenChange(false);
+  };
+  
+  const handleApiKeySubmitted = (newApiKey: string) => {
+    setApiKey(newApiKey);
+    setIsApiKeyDialogOpen(false);
+    toast({ title: 'API Key Saved!', description: 'Your key is saved in your browser. You can now generate follow-ups.' });
+  };
+  
+  const handleGenerateClick = async (type: 'initial' | 'followup', index: 1 | 2 | 3 | null) => {
+    if (!apiKey) {
+      setIsApiKeyDialogOpen(true);
+      return;
+    }
+
+    if (effectiveLimits.aiGenerationsPerMonth !== Infinity && (userSettings?.ai_usage_count ?? 0) >= effectiveLimits.aiGenerationsPerMonth) {
+        toast({
+            title: 'AI Generation Limit Reached',
+            description: `You have used all ${effectiveLimits.aiGenerationsPerMonth} of your AI generations for this month. Upgrade your plan for unlimited generations.`,
+            variant: 'destructive',
+            duration: 7000,
+        });
+        return;
+    }
+    
+    const generationIndex = type === 'initial' ? 0 : index;
+    setIsGenerating(generationIndex);
+
+    try {
+        const formData = form.getValues();
+        let generatedContent: { subject: string; body: string; } | null = null;
+
+        const aiContext = {
+            roleTitle: formData.roleTitle,
+            companyName: formData.companyName,
+            notes: formData.notes || '',
+            contacts: formData.contacts,
+            previousFollowUps: {
+                initialEmail: formData.initialEmail,
+                followUp1: formData.followUp1,
+                followUp2: formData.followUp2,
+                followUp3: formData.followUp3,
+            },
+            user: user,
+            userSettings: userSettings,
+            resumeData: userSettings?.resume as ResumeData | null,
+        };
+
+        if (type === 'initial') {
+            generatedContent = await generateInitialEmail(apiKey, aiContext);
+        } else if (type === 'followup' && index) {
+            generatedContent = await generateSingleFollowUp(apiKey, aiContext, index);
+        }
+
+        if (generatedContent) {
+            incrementCachedAiUsage();
+            if (type === 'initial') {
+                form.setValue(`initialEmail.subject`, generatedContent.subject, { shouldDirty: true });
+                form.setValue(`initialEmail.body`, generatedContent.body, { shouldDirty: true });
+                toast({ title: 'Initial Email Generated!', description: `Content for the initial email has been populated.` });
+            } else if (index) {
+                form.setValue(`followUp${index}.subject`, generatedContent.subject, { shouldDirty: true });
+                form.setValue(`followUp${index}.body`, generatedContent.body, { shouldDirty: true });
+                toast({ title: 'Follow-up Generated!', description: `Content for follow-up #${index} has been populated.` });
+            }
+        }
+    } catch (error: any) {
+        toast({ title: 'AI Generation Error', description: error.message, variant: 'destructive' });
+        if (error.message.includes('API key not valid')) {
+            setApiKey(null);
+            setIsApiKeyDialogOpen(true);
+        }
+    } finally {
+        setIsGenerating(null);
+    }
   };
 
 
@@ -388,6 +420,7 @@ export function EditJobOpeningDialog({
   }
 
   return (
+    <>
     <Dialog open={isOpen} onOpenChange={(open) => {
       if (!open) handleDialogCancel();
       else onOpenChange(open);
@@ -507,7 +540,7 @@ export function EditJobOpeningDialog({
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
                   <FormField control={form.control} name={`contacts.${index}.contactName`} render={({ field }) => (
                       <FormItem>
-                        <div className="flex justify-between"> {/* Removed items-center */}
+                        <div className="flex justify-between">
                             <FormLabel>Contact Person {index + 1}</FormLabel>
                             {contactFields.length > 1 ? (
                                 <Button
@@ -637,9 +670,9 @@ export function EditJobOpeningDialog({
                   />
                   <FormField control={form.control} name={`contacts.${index}.contactEmail`} render={({ field }) => (
                       <FormItem>
-                        <div className="flex justify-between"> {/* Removed items-center */}
+                        <div className="flex justify-between">
                             <FormLabel>Contact Email {index + 1}</FormLabel>
-                            <div className="h-7 w-7 shrink-0" /> {/* Placeholder */}
+                            <div className="h-7 w-7 shrink-0" />
                         </div>
                         <FormControl><Input type="email" placeholder="e.g. jane.doe@example.com" {...field} /></FormControl>
                         <FormMessage />
@@ -647,9 +680,9 @@ export function EditJobOpeningDialog({
                   />
                   <FormField control={form.control} name={`contacts.${index}.linkedin_url`} render={({ field }) => (
                       <FormItem>
-                        <div className="flex justify-between"> {/* Removed items-center */}
+                        <div className="flex justify-between">
                             <FormLabel>LinkedIn URL (Optional)</FormLabel>
-                            <div className="h-7 w-7 shrink-0" /> {/* Placeholder */}
+                            <div className="h-7 w-7 shrink-0" />
                         </div>
                         <FormControl><Input placeholder="https://linkedin.com/in/janedoe" {...field} /></FormControl>
                         <FormMessage />
@@ -657,9 +690,9 @@ export function EditJobOpeningDialog({
                   />
                   <FormField control={form.control} name={`contacts.${index}.phone`} render={({ field }) => (
                       <FormItem>
-                        <div className="flex justify-between"> {/* Removed items-center */}
+                        <div className="flex justify-between">
                             <FormLabel>Phone Number (Optional)</FormLabel>
-                            <div className="h-7 w-7 shrink-0" /> {/* Placeholder */}
+                            <div className="h-7 w-7 shrink-0" />
                         </div>
                         <FormControl><Input type="tel" placeholder="e.g. +1 234 567 8900" {...field} /></FormControl>
                         <FormMessage />
@@ -723,15 +756,65 @@ export function EditJobOpeningDialog({
             </div>
 
             <FormField control={form.control} name="notes" render={({ field }) => (
-                <FormItem> <FormLabel>Notes (Optional)</FormLabel> <FormControl><Textarea placeholder="Any additional notes..." {...field} rows={3}/></FormControl> <FormMessage /></FormItem>)}
+                <FormItem> <FormLabel>Notes (Optional)</FormLabel> <FormControl><Textarea placeholder="Paste job description or any other notes..." {...field} rows={3}/></FormControl> <FormMessage /></FormItem>)}
             />
-
+            
             <div className="space-y-6">
+                <div className="space-y-2 p-4 border rounded-md shadow-sm">
+                    <div className="flex justify-between items-center">
+                        <h4 className="text-md font-semibold text-primary">Initial Email Draft</h4>
+                        <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleGenerateClick('initial', null)}
+                            disabled={isGenerating === 0 || !isApiKeyLoaded}
+                        >
+                            {isGenerating === 0 ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4 text-primary" />}
+                            Generate
+                        </Button>
+                    </div>
+                    <FormField
+                        control={form.control}
+                        name="initialEmail.subject"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Subject</FormLabel>
+                                <FormControl><Input placeholder="Subject for your initial email" {...field} /></FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                    <FormField
+                        control={form.control}
+                        name="initialEmail.body"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Body</FormLabel>
+                                <FormControl><Textarea placeholder="Body for your initial email..." {...field} rows={4} /></FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                </div>
+
               {(['followUp1', 'followUp2', 'followUp3'] as const).map((key, index) => {
-                const num = index + 1;
+                const num = index + 1 as 1 | 2 | 3;
                 return (
                   <div key={key} className="space-y-2 p-4 border rounded-md shadow-sm">
-                    <h4 className="text-md font-semibold text-primary">{num === 1 ? '1st' : num === 2 ? '2nd' : '3rd'} Follow-Up draft</h4>
+                     <div className="flex justify-between items-center">
+                        <h4 className="text-md font-semibold text-primary">{num === 1 ? '1st' : num === 2 ? '2nd' : '3rd'} Follow-Up draft</h4>
+                        <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleGenerateClick('followup', num)}
+                            disabled={isGenerating === num || !isApiKeyLoaded}
+                        >
+                            {isGenerating === num ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4 text-primary" />}
+                            Generate
+                        </Button>
+                     </div>
                     <FormField
                       control={form.control}
                       name={`${key}.subject`}
@@ -822,5 +905,13 @@ export function EditJobOpeningDialog({
         </Form>
       </DialogContent>
     </Dialog>
+    {isApiKeyDialogOpen && (
+        <ApiKeyDialog
+            isOpen={isApiKeyDialogOpen}
+            onOpenChange={setIsApiKeyDialogOpen}
+            onApiKeySubmit={handleApiKeySubmitted}
+        />
+    )}
+    </>
   );
 }
