@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState } from 'react';
@@ -13,7 +14,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
-import { CalendarIcon, FileText, Loader2, PlusCircle, Trash2, X, Linkedin, Instagram, Twitter, Link2 } from 'lucide-react';
+import { CalendarIcon, FileText, Loader2, PlusCircle, Trash2, X, Linkedin, Instagram, Twitter, Link2, Save, Ban, Pencil, Image as ImageIcon } from 'lucide-react';
 import { format, parseISO, isValid } from 'date-fns';
 import type { ResumeData, UserSettings } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -67,6 +68,11 @@ const resumeEducationSchema = z.object({
   skillsUsed: z.array(skillSchema).optional(),
 });
 
+const projectImageSchema = z.object({
+  id: z.string().optional(),
+  value: z.string().url("Must be a valid URL").or(z.literal('')),
+});
+
 const resumeProjectSchema = z.object({
   id: z.string(),
   title: z.string().min(1, 'Project title is required').max(150, "Title cannot exceed 150 characters."),
@@ -74,7 +80,12 @@ const resumeProjectSchema = z.object({
   url: z.string().url("Must be a valid URL").optional().or(z.literal('')),
   endDate: z.date().optional(),
   skillsUsed: z.array(skillSchema).optional(),
-  imageUrls: z.array(z.string().url("Must be a valid URL").or(z.literal(''))).max(5, "You can add up to 5 images.").optional(),
+  imageUrls: z.array(projectImageSchema).max(5, "You can add up to 5 images.").optional(),
+});
+
+const certificateImageSchema = z.object({
+  id: z.string().optional(),
+  value: z.string().url("Must be a valid URL").or(z.literal('')),
 });
 
 const resumeCertificateSchema = z.object({
@@ -82,7 +93,7 @@ const resumeCertificateSchema = z.object({
   title: z.string().min(1, 'Title is required').max(150, "Title cannot exceed 150 characters."),
   description: z.string().max(1000, "Description is too long.").optional(),
   date: z.date().optional(),
-  imageUrls: z.array(z.string().url("Must be a valid URL").or(z.literal(''))).max(5, "You can add up to 5 images.").optional(),
+  imageUrls: z.array(certificateImageSchema).max(5, "You can add up to 5 images.").optional(),
 });
 
 export const resumeSchema = z.object({
@@ -110,6 +121,8 @@ const stringsToSkillObjects = (skills: string[] = []): { value: string }[] => sk
 const skillObjectsToStrings = (skills: { value: string }[] = []): string[] => skills.map(s => s.value);
 const stringsToUrlObjects = (urls: string[] = []): { value: string }[] => urls.map(u => ({ value: u }));
 const urlObjectsToStrings = (urls: { value: string }[] = []): string[] => urls.map(u => u.value);
+const stringsToImageObjects = (urls: string[] = []): { value: string }[] => urls.map(u => ({ value: u }));
+const imageObjectsToStrings = (urls: { value: string }[] = []): string[] => urls.map(u => u.value);
 
 
 const getSanitizedDefaultValues = (resume?: ResumeData | null): ResumeFormValues => {
@@ -165,14 +178,14 @@ const getSanitizedDefaultValues = (resume?: ResumeData | null): ResumeFormValues
             url: proj.url || '',
             endDate: safeParseDate(proj.endDate),
             skillsUsed: stringsToSkillObjects(proj.skillsUsed),
-            imageUrls: (proj.imageUrls || []),
+            imageUrls: stringsToImageObjects(proj.imageUrls),
         })),
         certificates: (resume?.certificates || []).map(cert => ({
             id: cert.id || crypto.randomUUID(),
             title: cert.title || '',
             description: cert.description || '',
             date: safeParseDate(cert.date),
-            imageUrls: (cert.imageUrls || []),
+            imageUrls: stringsToImageObjects(cert.imageUrls),
         })),
     };
 };
@@ -239,7 +252,8 @@ export function ResumeForm({ initialData, onSave, isLoading, showSkeleton }: Res
         experiences: data.experiences?.map(exp => ({ ...exp, skillsUsed: skillObjectsToStrings(exp.skillsUsed) })),
         education: data.education?.map(edu => ({ ...edu, skillsUsed: skillObjectsToStrings(edu.skillsUsed) })),
         skills: skillObjectsToStrings(data.skills),
-        projects: data.projects?.map(proj => ({ ...proj, skillsUsed: skillObjectsToStrings(proj.skillsUsed) })),
+        projects: data.projects?.map(proj => ({ ...proj, skillsUsed: skillObjectsToStrings(proj.skillsUsed), imageUrls: imageObjectsToStrings(proj.imageUrls) })),
+        certificates: data.certificates?.map(cert => ({ ...cert, imageUrls: imageObjectsToStrings(cert.imageUrls) })),
     };
     onSave(finalData);
   };
@@ -444,9 +458,9 @@ export function ResumeForm({ initialData, onSave, isLoading, showSkeleton }: Res
                         control={form.control}
                         name={`projects.${index}.imageUrls`}
                         render={({ field }) => (
-                           <ImageGallery
+                           <ProjectImageGallery
                                 imageUrls={field.value || []}
-                                onUrlsChange={field.onChange}
+                                onUrlsChange={(urls) => field.onChange(urls)}
                             />
                         )}
                     />
@@ -472,9 +486,9 @@ export function ResumeForm({ initialData, onSave, isLoading, showSkeleton }: Res
                         control={form.control}
                         name={`certificates.${index}.imageUrls`}
                         render={({ field }) => (
-                            <ImageGallery
+                            <CertificateImageGallery
                                 imageUrls={field.value || []}
-                                onUrlsChange={field.onChange}
+                                onUrlsChange={(urls) => field.onChange(urls)}
                             />
                         )}
                     />
@@ -498,42 +512,41 @@ export function ResumeForm({ initialData, onSave, isLoading, showSkeleton }: Res
 }
 
 // Reusable Image Gallery Component
-const ImageGallery: React.FC<{
-  imageUrls: string[];
-  onUrlsChange: (urls: string[]) => void;
+const ProjectImageGallery: React.FC<{
+  imageUrls: {id?:string, value: string}[];
+  onUrlsChange: (urls: {id?:string, value: string}[]) => void;
 }> = ({ imageUrls, onUrlsChange }) => {
+  const { toast } = useToast();
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [inputValue, setInputValue] = useState('');
   const [enlargedImageUrl, setEnlargedImageUrl] = useState<string | null>(null);
-  const { toast } = useToast();
 
   const handleAdd = () => {
     if (imageUrls.length >= 5) {
       toast({ title: "Image Limit Reached", description: "You can add a maximum of 5 images.", variant: 'default' });
       return;
     }
-    const newUrls = [...imageUrls, ''];
-    onUrlsChange(newUrls);
-    setEditingIndex(newUrls.length - 1);
+    onUrlsChange([...imageUrls, { value: '' }]);
+    setEditingIndex(imageUrls.length);
     setInputValue('');
   };
 
   const handleEdit = (index: number) => {
     setEditingIndex(index);
-    setInputValue(imageUrls[index]);
+    const fieldObject = imageUrls[index];
+    setInputValue(fieldObject.value);
   };
 
   const handleSave = (index: number) => {
     const newUrls = [...imageUrls];
-    newUrls[index] = inputValue;
+    newUrls[index] = { ...newUrls[index], value: inputValue };
     onUrlsChange(newUrls);
     setEditingIndex(null);
     setInputValue('');
   };
   
   const handleRemove = (index: number) => {
-    const newUrls = imageUrls.filter((_, i) => i !== index);
-    onUrlsChange(newUrls);
+    onUrlsChange(imageUrls.filter((_, i) => i !== index));
     if (editingIndex === index) {
       setEditingIndex(null);
       setInputValue('');
@@ -541,7 +554,7 @@ const ImageGallery: React.FC<{
   };
   
   const handleCancel = (index: number) => {
-    if (imageUrls[index] === '') {
+    if (imageUrls[index]?.value === '') {
         handleRemove(index);
     }
     setEditingIndex(null);
@@ -564,10 +577,11 @@ const ImageGallery: React.FC<{
       <div className="space-y-3">
         <label className="text-sm font-medium">Images (up to 5)</label>
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-          {imageUrls.map((url, index) => {
-            const displayUrl = convertGoogleDriveUrl(url);
+          {imageUrls.map((field, index) => {
+            const imageUrl = field.value;
+            const displayUrl = convertGoogleDriveUrl(imageUrl);
             return (
-              <div key={`${url}-${index}`} className="relative aspect-video group">
+              <div key={index} className="relative aspect-video group">
                 {editingIndex === index ? (
                   <div className="w-full h-full flex flex-col items-center justify-center p-2 border-2 border-primary rounded-md bg-muted/50">
                     <Input
@@ -626,3 +640,133 @@ const ImageGallery: React.FC<{
     </>
   );
 };
+
+
+const CertificateImageGallery: React.FC<{
+    imageUrls: {id?:string, value: string}[];
+    onUrlsChange: (urls: {id?:string, value: string}[]) => void;
+  }> = ({ imageUrls, onUrlsChange }) => {
+    const { toast } = useToast();
+    const [editingIndex, setEditingIndex] = useState<number | null>(null);
+    const [inputValue, setInputValue] = useState('');
+    const [enlargedImageUrl, setEnlargedImageUrl] = useState<string | null>(null);
+  
+    const handleAdd = () => {
+      if (imageUrls.length >= 5) {
+        toast({ title: "Image Limit Reached", description: "You can add a maximum of 5 images.", variant: 'default' });
+        return;
+      }
+      onUrlsChange([...imageUrls, { value: '' }]);
+      setEditingIndex(imageUrls.length);
+      setInputValue('');
+    };
+  
+    const handleEdit = (index: number) => {
+      setEditingIndex(index);
+      const fieldObject = imageUrls[index];
+      setInputValue(fieldObject.value);
+    };
+  
+    const handleSave = (index: number) => {
+      const newUrls = [...imageUrls];
+      newUrls[index] = { ...newUrls[index], value: inputValue };
+      onUrlsChange(newUrls);
+      setEditingIndex(null);
+      setInputValue('');
+    };
+    
+    const handleRemove = (index: number) => {
+      onUrlsChange(imageUrls.filter((_, i) => i !== index));
+      if (editingIndex === index) {
+        setEditingIndex(null);
+        setInputValue('');
+      }
+    };
+    
+    const handleCancel = (index: number) => {
+      if (imageUrls[index]?.value === '') {
+          handleRemove(index);
+      }
+      setEditingIndex(null);
+      setInputValue('');
+    };
+    
+    const convertGoogleDriveUrl = (url: string): string => {
+      if (typeof url !== 'string' || !url) return '';
+      if (url.includes('drive.google.com/file/d/')) {
+        const fileIdMatch = url.match(/file\/d\/([a-zA-Z0-9_-]+)/);
+        if (fileIdMatch && fileIdMatch[1]) {
+          return `https://drive.google.com/uc?export=view&id=${fileIdMatch[1]}`;
+        }
+      }
+      return url;
+    };
+  
+    return (
+      <>
+        <div className="space-y-3">
+          <label className="text-sm font-medium">Images (up to 5)</label>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+            {imageUrls.map((field, index) => {
+              const imageUrl = field.value;
+              const displayUrl = convertGoogleDriveUrl(imageUrl);
+              return (
+                <div key={index} className="relative aspect-video group">
+                  {editingIndex === index ? (
+                    <div className="w-full h-full flex flex-col items-center justify-center p-2 border-2 border-primary rounded-md bg-muted/50">
+                      <Input
+                        value={inputValue}
+                        onChange={(e) => setInputValue(e.target.value)}
+                        placeholder="Paste image URL"
+                        className="h-8 text-xs mb-2 focus-visible:ring-0 focus-visible:ring-offset-0"
+                      />
+                      <div className="flex gap-1.5">
+                        <Button type="button" size="icon" className="h-6 w-6" onClick={() => handleSave(index)}><Save className="h-3.5 w-3.5" /></Button>
+                        <Button type="button" variant="ghost" size="icon" className="h-6 w-6 hover:bg-transparent text-muted-foreground hover:text-muted-foreground" onClick={() => handleCancel(index)}><Ban className="h-3.5 w-3.5" /></Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      <Image
+                        src={displayUrl || 'https://placehold.co/400x300.png'}
+                        alt={`Image ${index + 1}`}
+                        width={400}
+                        height={300}
+                        className="w-full h-full object-cover rounded-md border cursor-pointer"
+                        onClick={() => displayUrl && setEnlargedImageUrl(displayUrl)}
+                        onError={(e) => { e.currentTarget.src = 'https://placehold.co/400x300.png'; }}
+                      />
+                      <div className="absolute top-1 right-1 flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <Button type="button" size="icon" className="h-6 w-6 bg-black/60 hover:bg-black/80" onClick={() => handleEdit(index)}><Pencil className="h-3.5 w-3.5 text-white" /></Button>
+                        <Button type="button" variant="destructive" size="icon" className="h-6 w-6 bg-destructive/80 hover:bg-destructive" onClick={() => handleRemove(index)}><Trash2 className="h-3.5 w-3.5 text-white" /></Button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              )
+            })}
+            {imageUrls.length < 5 && (
+              <Button type="button" variant="outline" className="h-full aspect-video w-full border-2 border-solid flex flex-col items-center justify-center hover:bg-muted/30" onClick={handleAdd}>
+                <ImageIcon className="h-6 w-6 text-muted-foreground" />
+                <span className="text-xs mt-1 text-muted-foreground">Add Image</span>
+              </Button>
+            )}
+          </div>
+        </div>
+        {enlargedImageUrl && (
+          <div
+            className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 cursor-default"
+            onClick={() => setEnlargedImageUrl(null)}
+          >
+            <Image
+              src={enlargedImageUrl}
+              alt="Enlarged view"
+              width={1200}
+              height={800}
+              className="max-w-[90vw] max-h-[90vh] object-contain rounded-lg shadow-2xl"
+            />
+          </div>
+        )}
+      </>
+    );
+  };
