@@ -1,3 +1,4 @@
+
 import type { Step } from 'react-shepherd';
 
 // Shepherd.js attachTo.on supports these specific placements.
@@ -19,12 +20,19 @@ type PopperPlacement =
   | 'left-start'
   | 'left-end';
 
-interface StepWithTypedAttachment extends Omit<Step, 'attachTo'> {
+// Extend the base Step type to include all properties we're using.
+interface StepWithTypedAttachment extends Step {
+  id: string;
   attachTo?: {
     element: string;
     on: PopperPlacement;
   };
+  buttons?: Step.StepButton[];
+  canClickTarget?: boolean;
+  title?: string;
+  text?: string | ((element: HTMLElement) => string) | HTMLElement;
 }
+
 
 export const steps: StepWithTypedAttachment[] = [
   {
