@@ -263,7 +263,7 @@ function ImageGallery<TFieldValues extends ResumeFormValues>({
   const { control } = useFormContext<TFieldValues>();
   const { fields, append, remove, update } = useFieldArray({
     control,
-    name: namePrefix as FieldArrayPath<TFieldValues>,
+    name: namePrefix,
   });
 
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
@@ -283,7 +283,7 @@ function ImageGallery<TFieldValues extends ResumeFormValues>({
   const handleEdit = (index: number) => {
     setEditingIndex(index);
     const fieldObject = fields[index];
-    setInputValue(fieldObject.value);
+    setInputValue(fieldObject.value || '');
   };
 
   const handleSave = (index: number) => {
