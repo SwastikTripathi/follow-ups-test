@@ -116,7 +116,10 @@ export function EditLeadDialog({
             roleTitle: op.role_title,
             contacts: formContacts,
             initialEmailDate: typeof op.initial_email_date === 'string' ? new Date(op.initial_email_date) : op.initial_email_date || new Date(),
-            initialEmail: op.initial_email || { subject: '', body: ''},
+            initialEmail: {
+              subject: op.initial_email?.subject ?? '',
+              body: op.initial_email?.body ?? '',
+            },
             jobDescriptionUrl: op.job_description_url || '',
             notes: op.notes || '',
             followUp1: {
@@ -743,7 +746,7 @@ export function EditLeadDialog({
             <FormField control={form.control} name="notes" render={({ field }) => (
                 <FormItem> <FormLabel>Notes (Optional)</FormLabel> <FormControl><Textarea placeholder="Paste job description or any other notes..." {...field} rows={3}/></FormControl> <FormMessage /></FormItem>)}
             />
-
+            
             <div className="space-y-6">
                 <div className="space-y-2 p-4 border rounded-md shadow-sm">
                     <div className="flex justify-between items-center">
@@ -900,3 +903,5 @@ export function EditLeadDialog({
     </>
   );
 }
+
+    
