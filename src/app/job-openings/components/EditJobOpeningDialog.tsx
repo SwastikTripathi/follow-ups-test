@@ -120,7 +120,10 @@ export function EditJobOpeningDialog({
             roleTitle: op.role_title,
             contacts: formContacts,
             initialEmailDate: typeof op.initial_email_date === 'string' ? new Date(op.initial_email_date) : op.initial_email_date || new Date(),
-            initialEmail: op.initial_email || { subject: '', body: ''},
+            initialEmail: {
+              subject: op.initial_email?.subject ?? '',
+              body: op.initial_email?.body ?? '',
+            },
             jobDescriptionUrl: op.job_description_url || '',
             notes: op.notes || '',
             followUp1: {
