@@ -48,10 +48,7 @@ interface InteractiveTutorialProps {
 
 export function InteractiveTutorial({ onTutorialComplete }: InteractiveTutorialProps) {
   return (
-    // The 'as any' is a workaround for a mismatch between react-shepherd's Step type
-    // and the underlying shepherd.js library's expectation for attachTo.on.
-    // The custom StepWithTypedAttachment type ensures our steps are correct.
-    <ShepherdTour steps={steps as any} tourOptions={tourOptions}>
+    <ShepherdTour steps={steps} tourOptions={tourOptions}>
       <TourController onComplete={onTutorialComplete} />
     </ShepherdTour>
   );
