@@ -21,8 +21,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import Image from 'next/image';
 
-const urlField = z.object({ value: z.string().url("Must be a valid URL").max(2048, "URL is too long.").or(z.literal('')) });
-type UrlFieldType = z.infer<typeof urlField>;
+const urlFieldSchema = z.object({ value: z.string().url("Must be a valid URL").max(2048, "URL is too long.").or(z.literal('')) });
+type UrlFieldType = z.infer<typeof urlFieldSchema>;
 
 // Zod Schemas for Resume sections
 const resumeContactInfoSchema = z.object({
@@ -37,7 +37,7 @@ const resumeSocialsSchema = z.object({
     linkedin: z.string().url("Must be a valid LinkedIn URL").optional().or(z.literal('')),
     instagram: z.string().url("Must be a valid Instagram URL").optional().or(z.literal('')),
     twitter: z.string().url("Must be a valid Twitter/X URL").optional().or(z.literal('')),
-    otherLinks: z.array(z.object({ value: z.string().url("Must be a valid URL").max(2048, "URL is too long.") })).max(3, "You can add up to 3 other links.").optional(),
+    otherLinks: z.array(urlFieldSchema).max(3, "You can add up to 3 other links.").optional(),
 });
 
 const resumeExperienceSchema = z.object({
@@ -69,7 +69,7 @@ const resumeProjectSchema = z.object({
   url: z.string().url("Must be a valid URL").optional().or(z.literal('')),
   endDate: z.date().optional(),
   skillsUsed: z.array(z.string().max(50, "Skill cannot exceed 50 characters.")).optional(),
-  imageUrls: z.array(urlField).max(5, "You can add up to 5 images.").optional(),
+  imageUrls: z.array(urlFieldSchema).max(5, "You can add up to 5 images.").optional(),
 });
 
 const resumeCertificateSchema = z.object({
@@ -77,7 +77,7 @@ const resumeCertificateSchema = z.object({
   title: z.string().min(1, 'Title is required').max(150, "Title cannot exceed 150 characters."),
   description: z.string().max(1000, "Description is too long.").optional(),
   date: z.date().optional(),
-  imageUrls: z.array(urlField).max(5, "You can add up to 5 images.").optional(),
+  imageUrls: z.array(urlFieldSchema).max(5, "You can add up to 5 images.").optional(),
 });
 
 export const resumeSchema = z.object({
@@ -168,7 +168,7 @@ const getSanitizedDefaultValues = (resume?: ResumeData | null): ResumeFormValues
 function ProjectImageGallery({ control, projectIndex }: { control: any, projectIndex: number }) {
   const { fields, append, remove, update } = useFieldArray({
     control,
-    name: `projects.${projectIndex}.imageUrls` as const,
+    name: `projects.${projectIndex}.imageUrls` as 'projects.0.imageUrls',
   });
   
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
@@ -187,7 +187,7 @@ function ProjectImageGallery({ control, projectIndex }: { control: any, projectI
 
   const handleEdit = (index: number) => {
     setEditingIndex(index);
-    const fieldObject = fields[index];
+    const fieldObject = fields[index] as { value: string };
     setInputValue(fieldObject.value);
   };
 
@@ -198,7 +198,7 @@ function ProjectImageGallery({ control, projectIndex }: { control: any, projectI
   };
 
   const handleCancel = (index: number) => {
-    const fieldObject = fields[index];
+    const fieldObject = fields[index] as { value: string };
     if (fieldObject.value === '') {
         remove(index);
     }
@@ -223,7 +223,7 @@ function ProjectImageGallery({ control, projectIndex }: { control: any, projectI
         <FormLabel>Images (up to 5)</FormLabel>
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
           {fields.map((field, index) => {
-            const imageUrl = field.value;
+            const imageUrl = (field as { value: string }).value;
             const displayUrl = convertGoogleDriveUrl(imageUrl);
             return (
               <div key={field.id} className="relative aspect-video group">
@@ -289,7 +289,7 @@ function ProjectImageGallery({ control, projectIndex }: { control: any, projectI
 function CertificateImageGallery({ control, certIndex }: { control: any, certIndex: number }) {
   const { fields, append, remove, update } = useFieldArray({
     control,
-    name: `certificates.${certIndex}.imageUrls` as const,
+    name: `certificates.${certIndex}.imageUrls` as 'certificates.0.imageUrls',
   });
 
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
@@ -308,7 +308,7 @@ function CertificateImageGallery({ control, certIndex }: { control: any, certInd
 
   const handleEdit = (index: number) => {
     setEditingIndex(index);
-    const fieldObject = fields[index];
+    const fieldObject = fields[index] as { value: string };
     setInputValue(fieldObject.value);
   };
 
@@ -319,7 +319,7 @@ function CertificateImageGallery({ control, certIndex }: { control: any, certInd
   };
   
   const handleCancel = (index: number) => {
-    const fieldObject = fields[index];
+    const fieldObject = fields[index] as { value: string };
     if (fieldObject.value === '') {
         remove(index);
     }
@@ -344,7 +344,7 @@ function CertificateImageGallery({ control, certIndex }: { control: any, certInd
         <FormLabel>Images (up to 5)</FormLabel>
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
           {fields.map((field, index) => {
-            const imageUrl = field.value;
+            const imageUrl = (field as { value: string }).value;
             const displayUrl = convertGoogleDriveUrl(imageUrl);
             return (
               <div key={field.id} className="relative aspect-video group">
