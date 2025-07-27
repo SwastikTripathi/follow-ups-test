@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState } from 'react';
@@ -79,8 +80,6 @@ export function GenerateLeadFromJDDialog({
       return;
     }
 
-    form.control.getFieldState('jobDescription').isSubmitting = true;
-
     try {
         const generatedData = await generateLeadFromJD(apiKey, values.jobDescription, values.userContext || '', user, userSettings);
         
@@ -111,8 +110,6 @@ export function GenerateLeadFromJDDialog({
         errorMessage = error.message;
       }
       toast({ title: 'AI Generation Error', description: errorMessage, variant: 'destructive' });
-    } finally {
-      form.control.getFieldState('jobDescription').isSubmitting = false;
     }
   };
 
