@@ -184,8 +184,8 @@ function ProjectImageGallery({ control, projectIndex }: { control: any, projectI
 
   const handleEdit = (index: number) => {
     setEditingIndex(index);
-    const fieldObject = fields[index];
-    setInputValue(fieldObject.value || '');
+    const fieldObject = fields[index] as { value: string; id: string; };
+    setInputValue(fieldObject.value);
   };
 
   const handleSave = (index: number) => {
@@ -195,7 +195,7 @@ function ProjectImageGallery({ control, projectIndex }: { control: any, projectI
   };
 
   const handleCancel = (index: number) => {
-    const fieldObject = fields[index];
+    const fieldObject = fields[index] as { value: string; id: string; };
     if (fieldObject.value === '') {
         remove(index);
     }
@@ -220,7 +220,7 @@ function ProjectImageGallery({ control, projectIndex }: { control: any, projectI
         <FormLabel>Images (up to 5)</FormLabel>
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
           {fields.map((field, index) => {
-            const imageUrl = field.value;
+            const imageUrl = (field as { value: string }).value;
             const displayUrl = convertGoogleDriveUrl(imageUrl);
             return (
               <div key={field.id} className="relative aspect-video group">
@@ -305,8 +305,8 @@ function CertificateImageGallery({ control, certIndex }: { control: any, certInd
 
   const handleEdit = (index: number) => {
     setEditingIndex(index);
-    const fieldObject = fields[index];
-    setInputValue(fieldObject.value || '');
+    const fieldObject = fields[index] as { value: string; id: string; };
+    setInputValue(fieldObject.value);
   };
 
   const handleSave = (index: number) => {
@@ -316,7 +316,7 @@ function CertificateImageGallery({ control, certIndex }: { control: any, certInd
   };
   
   const handleCancel = (index: number) => {
-    const fieldObject = fields[index];
+    const fieldObject = fields[index] as { value: string; id: string; };
     if (fieldObject.value === '') {
         remove(index);
     }
@@ -341,7 +341,7 @@ function CertificateImageGallery({ control, certIndex }: { control: any, certInd
         <FormLabel>Images (up to 5)</FormLabel>
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
           {fields.map((field, index) => {
-            const imageUrl = field.value;
+            const imageUrl = (field as { value: string }).value;
             const displayUrl = convertGoogleDriveUrl(imageUrl);
             return (
               <div key={field.id} className="relative aspect-video group">
