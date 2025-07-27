@@ -212,7 +212,7 @@ export default function AccountSettingsPage() {
                                  cadenceDaysSource.length === 3 &&
                                  cadenceDaysSource.every(d => typeof d === 'number');
 
-        const cadenceDays: [number, number, number] = isValidCadenceArray
+        const cadenceDays = isValidCadenceArray
             ? (cadenceDaysSource as [number, number, number])
             : DEFAULT_FOLLOW_UP_CADENCE_DAYS;
 
@@ -534,7 +534,7 @@ export default function AccountSettingsPage() {
               initialData={userSettings?.resume as ResumeData | null}
               onSave={(data) => handleSaveSection('your-resume', data)}
               isLoading={!!isSubmitting['your-resume'] || isLoadingSettings}
-              showSkeleton={showSkeleton}
+              showSkeleton={!!showSkeleton}
             />
         )}
 
@@ -722,7 +722,7 @@ export default function AccountSettingsPage() {
 
 const SkeletonItem: React.FC<{label: string, type?: 'input' | 'select' | 'textarea'}> = ({label, type = 'input'}) => (
   <FormItem>
-    <FormLabel><Label>{label}</FormLabel></FormItem>
+    <FormLabel><Label>{label}</Label></FormLabel>
     <Skeleton className={type === 'textarea' ? "h-20 w-full" : "h-10 w-full"} />
   </FormItem>
 );
