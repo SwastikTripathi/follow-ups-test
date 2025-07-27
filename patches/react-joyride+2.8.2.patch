@@ -1,0 +1,41 @@
+patch-package
+--- a/node_modules/react-joyride/dist/index.mjs
++++ b/node_modules/react-joyride/dist/index.mjs
+@@ -1,5 +1,5 @@
+-import ReactDOM from 'react-dom';
+ import React from 'react';
++import { createRoot } from 'react-dom/client';
+ import PropTypes from 'prop-types';
+ import deepmerge from 'deepmerge';
+ import Joyride from 'react-joyride/es';
+@@ -21,11 +21,17 @@
+     var _this$props = this.props,
+         callback = _this$props.callback,
+         props = _objectWithoutProperties(_this$props, ["callback"]);
+-
++    
+     var joyride = /*#__PURE__*/React.createElement(Joyride, _extends({}, props, {
+       callback: this.handleCallback
+     }));
+-    ReactDOM.unstable_renderSubtreeIntoContainer(this, joyride, this.node);
++    
++    if (!this.root) {
++      this.root = createRoot(this.node);
++    }
++
++    this.root.render(joyride);
+   };
+ 
+   _proto.componentDidMount = function componentDidMount() {
+@@ -35,7 +41,10 @@
+   };
+ 
+   _proto.componentWillUnmount = function componentWillUnmount() {
+-    ReactDOM.unmountComponentAtNode(this.node);
++    if (this.root) {
++      this.root.unmount();
++    }
++
+     if (this.node.parentNode) {
+       this.node.parentNode.removeChild(this.node);
+     }
