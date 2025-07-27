@@ -214,7 +214,7 @@ export interface ResumeData {
 export interface UserSettings {
   user_id: string;
   full_name?: string | null;
-  follow_up_cadence_days: [number, number, number] | Json;
+  follow_up_cadence_days: [number, number, number] | null;
   default_email_templates: DefaultFollowUpTemplates | Json;
   created_at?: string;
   // New onboarding fields

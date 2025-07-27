@@ -208,8 +208,13 @@ export default function AccountSettingsPage() {
         };
         publicProfileForm.reset(publicProfileData);
 
-        const cadenceDays = (Array.isArray(userSettings?.follow_up_cadence_days) && userSettings.follow_up_cadence_days.length === 3)
-            ? userSettings.follow_up_cadence_days
+        const cadenceDaysSource = userSettings?.follow_up_cadence_days;
+        const isValidCadenceArray = Array.isArray(cadenceDaysSource) &&
+                                 cadenceDaysSource.length === 3 &&
+                                 cadenceDaysSource.every(d => typeof d === 'number');
+
+        const cadenceDays: [number, number, number] = isValidCadenceArray
+            ? (cadenceDaysSource as [number, number, number])
             : DEFAULT_FOLLOW_UP_CADENCE_DAYS;
 
         const usageData = {

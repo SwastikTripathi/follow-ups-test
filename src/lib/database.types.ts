@@ -377,7 +377,7 @@ export type Database = {
           current_management_method: string[] | null
           current_role: string | null
           default_email_templates: Json | null
-          follow_up_cadence_days: Json | null
+          follow_up_cadence_days: number[] | null
           full_name: string | null
           gender: string | null
           gender_self_describe: string | null
@@ -400,7 +400,7 @@ export type Database = {
           current_management_method?: string[] | null
           current_role?: string | null
           default_email_templates?: Json | null
-          follow_up_cadence_days?: Json | null
+          follow_up_cadence_days?: number[] | null
           full_name?: string | null
           gender?: string | null
           gender_self_describe?: string | null
@@ -423,7 +423,7 @@ export type Database = {
           current_management_method?: string[] | null
           current_role?: string | null
           default_email_templates?: Json | null
-          follow_up_cadence_days?: Json | null
+          follow_up_cadence_days?: number[] | null
           full_name?: string | null
           gender?: string | null
           gender_self_describe?: string | null
