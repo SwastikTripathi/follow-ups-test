@@ -282,7 +282,7 @@ function ImageGallery<TFieldValues extends ResumeFormValues>({
 
   const handleEdit = (index: number) => {
     setEditingIndex(index);
-    const fieldObject = fields[index] as { value: string };
+    const fieldObject = fields[index];
     setInputValue(fieldObject.value);
   };
 
@@ -293,7 +293,7 @@ function ImageGallery<TFieldValues extends ResumeFormValues>({
   };
 
   const handleCancel = (index: number) => {
-    const fieldObject = fields[index] as { value: string };
+    const fieldObject = fields[index];
     if (fieldObject.value === '') {
         remove(index);
     }
@@ -318,7 +318,7 @@ function ImageGallery<TFieldValues extends ResumeFormValues>({
         <FormLabel>Images (up to 5)</FormLabel>
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
           {fields.map((field, index) => {
-            const imageUrl = (field as any).value;
+            const imageUrl = field.value;
             const displayUrl = convertGoogleDriveUrl(imageUrl);
             return (
               <div key={field.id} className="relative aspect-video group">
