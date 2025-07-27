@@ -2,7 +2,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { useForm, useFieldArray, Controller, useFormContext } from 'react-hook-form';
+import { useForm, useFieldArray, Controller, useFormContext, FieldArrayPath } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -263,7 +263,7 @@ function ImageGallery<TFieldValues extends ResumeFormValues>({
   const { control } = useFormContext<TFieldValues>();
   const { fields, append, remove, update } = useFieldArray({
     control,
-    name: namePrefix,
+    name: namePrefix as FieldArrayPath<TFieldValues>,
   });
 
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
@@ -302,7 +302,7 @@ function ImageGallery<TFieldValues extends ResumeFormValues>({
   };
   
   const convertGoogleDriveUrl = (url: string): string => {
-      if (typeof url !== 'string') return '';
+      if (typeof url !== 'string' || !url) return '';
       if (url.includes('drive.google.com/file/d/')) {
         const fileIdMatch = url.match(/file\/d\/([a-zA-Z0-9_-]+)/);
         if (fileIdMatch && fileIdMatch[1]) {
