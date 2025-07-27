@@ -1,5 +1,7 @@
 
-export const steps = [
+import type { Step } from 'react-shepherd';
+
+export const steps: Step[] = [
   {
     id: 'intro',
     attachTo: { element: '#dashboard-main-content-area', on: 'top' },
