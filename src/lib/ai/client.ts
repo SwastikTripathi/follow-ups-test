@@ -6,7 +6,7 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 import { z } from 'zod';
 import type { AddLeadFormValues } from '@/app/leads/components/shared/leadSchemas';
 import type { User } from '@supabase/supabase-js';
-import type { UserSettings, ResumeData } from '../types';
+import type { UserSettings, ResumeData, DefaultFollowUpTemplates } from '../types';
 
 // Zod schema for the expected output when generating a full lead from a job description
 const generateLeadOutputSchema = z.object({
@@ -37,8 +37,9 @@ const singleFollowUpOutputSchema = z.object({
 });
 
 const getSignature = (user: User | null, userSettings: UserSettings | null): string => {
-    if (userSettings?.default_email_templates?.sharedSignature) {
-        return `\n\n${userSettings.default_email_templates.sharedSignature}`;
+    const templates = userSettings?.default_email_templates as DefaultFollowUpTemplates | null;
+    if (templates && typeof templates === 'object' && templates.sharedSignature) {
+        return `\n\n${templates.sharedSignature}`;
     }
     const userName = userSettings?.full_name || user?.user_metadata?.full_name || 'Your Name';
     const userEmail = user?.email || 'your.email@example.com';
@@ -110,7 +111,7 @@ export async function generateLeadFromJD(apiKey: string, jobDescription: string,
     }
     
     const signature = getSignature(user, userSettings);
-    const userDefaults = userSettings?.default_email_templates;
+    const userDefaults = userSettings?.default_email_templates as DefaultFollowUpTemplates | null;
     const aiData = validatedOutput.data;
 
     const followUp1Subject = userDefaults?.followUp1?.subject || aiData.followUpOne.subject;
