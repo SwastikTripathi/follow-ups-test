@@ -4,11 +4,6 @@ import type { Step } from 'react-shepherd';
 export const steps: Step[] = [
   {
     id: 'intro',
-    when: {
-        show: () => {
-          document.querySelector('#sidebar-nav-dashboard')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }
-    },
     buttons: [
       {
         classes: 'shepherd-button-secondary',
