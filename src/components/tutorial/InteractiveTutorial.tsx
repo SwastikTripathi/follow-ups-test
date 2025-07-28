@@ -48,7 +48,7 @@ interface InteractiveTutorialProps {
 
 export function InteractiveTutorial({ onTutorialComplete }: InteractiveTutorialProps) {
   return (
-    <ShepherdTour steps={steps} tourOptions={tourOptions}>
+    <ShepherdTour steps={steps as any} tourOptions={tourOptions}>
       <TourController onComplete={onTutorialComplete} />
     </ShepherdTour>
   );
