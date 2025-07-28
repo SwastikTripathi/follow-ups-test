@@ -1,9 +1,31 @@
 
 import type { Step } from 'react-shepherd';
 
-export const steps: Step[] = [
+// react-shepherd's Step type is missing some properties.
+// We are defining our own type to extend it.
+interface ShepherdStep extends Step {
+    id: string;
+    text?: string | ((element: HTMLElement) => string) | HTMLElement;
+    title?: string;
+    attachTo?: {
+        element: string | HTMLElement;
+        on: 'top' | 'bottom' | 'left' | 'right';
+    };
+    buttons?: {
+        classes?: string;
+        text: string;
+        type?: 'back' | 'cancel' | 'next';
+        action?: () => void;
+    }[];
+    canClickTarget?: boolean;
+}
+
+
+export const steps: ShepherdStep[] = [
   {
     id: 'intro',
+    title: 'Welcome to FollowUps!',
+    text: "Let's take a quick tour of the main features to get you started.",
     buttons: [
       {
         classes: 'shepherd-button-secondary',
@@ -16,8 +38,6 @@ export const steps: Step[] = [
         type: 'next',
       },
     ],
-    title: 'Welcome to FollowUps!',
-    text: "Let's take a quick tour of the main features to get you started.",
   },
   {
     id: 'add-lead',
