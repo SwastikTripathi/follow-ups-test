@@ -16,12 +16,16 @@ export const steps: Step[] = [
         {
           classes: 'shepherd-button-secondary shepherd-button-skip',
           text: 'Skip',
-          type: 'cancel',
+          action(this: any) {
+            return this.cancel();
+          },
         },
         {
           classes: 'shepherd-button-primary',
           text: 'Next',
-          type: 'next',
+          action(this: any) {
+            return this.next();
+          },
         },
       ],
     },
@@ -35,12 +39,16 @@ export const steps: Step[] = [
         {
             classes: 'shepherd-button-secondary',
             text: 'Back',
-            type: 'back',
+            action(this: any) {
+              return this.back();
+            },
         },
         {
             classes: 'shepherd-button-primary',
             text: 'Next',
-            type: 'next',
+            action(this: any) {
+              return this.next();
+            },
         },
         ],
         text: createStepText("Your Command Center 🧑‍✈️", "This is your Mission Control! This is where you'll see your most important stats at a glance, like reminders and recent activity. No more guessing what's next!"),
@@ -55,12 +63,16 @@ export const steps: Step[] = [
         {
             classes: 'shepherd-button-secondary',
             text: 'Back',
-            type: 'back',
+            action(this: any) {
+              return this.back();
+            },
         },
         {
             classes: 'shepherd-button-primary',
             text: 'Next',
-            type: 'next',
+            action(this: any) {
+              return this.next();
+            },
         },
         ],
         text: createStepText('Your Trusty Toolkit 🧭', 'This is your navigation panel. Jump between your Dashboard, Leads, Contacts, and Companies from here. Easy peasy.'),
@@ -75,12 +87,16 @@ export const steps: Step[] = [
         {
             classes: 'shepherd-button-secondary',
             text: 'Back',
-            type: 'back',
+            action(this: any) {
+              return this.back();
+            },
         },
         {
             classes: 'shepherd-button-primary',
             text: 'Next',
-            type: 'next',
+            action(this: any) {
+              return this.next();
+            },
         },
         ],
         text: createStepText('Your Power Meter ⚡️', "Keep an eye on your usage stats here. When you're ready to level up, you can upgrade your plan right from the settings menu."),
@@ -95,12 +111,16 @@ export const steps: Step[] = [
         {
             classes: 'shepherd-button-secondary',
             text: 'Back',
-            type: 'back',
+            action(this: any) {
+              return this.back();
+            },
         },
         {
             classes: 'shepherd-button-primary',
             text: 'Next',
-            type: 'next',
+            action(this: any) {
+              return this.next();
+            },
         },
         ],
         text: createStepText('Adding a New Lead ✨', "This is where the magic begins! Click here to add a new job application, sales lead, or any other opportunity you want to track."),
@@ -114,12 +134,16 @@ export const steps: Step[] = [
         {
             classes: 'shepherd-button-secondary',
             text: 'Back',
-            type: 'back',
+            action(this: any) {
+              return this.back();
+            },
         },
         {
             classes: 'shepherd-button-primary',
             text: 'Next',
-            type: 'next',
+            action(this: any) {
+              return this.next();
+            },
         },
         ],
     },
@@ -128,17 +152,21 @@ export const steps: Step[] = [
     id: 'final-leads-step',
     options: {
         attachTo: { element: '#sidebar-nav-leads', on: 'right' },
-        canClickTarget: false, 
+        canClickTarget: false,
         buttons: [
         {
             classes: 'shepherd-button-secondary',
             text: 'Back',
-            type: 'back',
+            action(this: any) {
+              return this.back();
+            },
         },
         {
             classes: 'shepherd-button-primary',
             text: 'Finish',
-            type: 'next', 
+            action(this: any) {
+              return this.next();
+            },
         },
         ],
         text: createStepText('Manage Your Leads 🚀', 'All your leads will live on the Leads page. Click "Finish" to complete the tour and start crushing your goals!'),
