@@ -10,10 +10,10 @@ import { useOnboardingTutorial } from '@/contexts/OnboardingTutorialContext';
 const tourOptions = {
   defaultStepOptions: {
     cancelIcon: {
-      enabled: true,
+      enabled: false,
     },
     classes: 'shadow-md bg-background',
-    scrollTo: { behavior: 'smooth' as ScrollBehavior, block: 'center' as ScrollLogicalPosition },
+    scrollTo: false,
   },
   useModalOverlay: true,
 };
@@ -23,21 +23,37 @@ const TourController: React.FC<{ onComplete: () => void }> = ({ onComplete }) =>
   const { startTutorial, setStartTutorial } = useOnboardingTutorial();
 
   useEffect(() => {
-    if (startTutorial && tour) {
-      tour.start();
-      setStartTutorial(false);
+    if (tour) {
+      const onTourComplete = () => {
+        console.log('[TUTORIAL] "complete" event fired. Calling onTutorialComplete prop.');
+        onComplete();
+      };
 
-      const onTourComplete = () => onComplete();
+      const onTourCancel = () => {
+        console.log('[TUTORIAL] "cancel" event fired. Calling onTutorialComplete prop.');
+        onComplete();
+      };
 
       tour.on('complete', onTourComplete);
-      tour.on('cancel', onTourComplete);
+      tour.on('cancel', onTourCancel);
 
       return () => {
+        console.log('[TUTORIAL] Cleaning up tour listeners.');
         tour.off('complete', onTourComplete);
-        tour.off('cancel', onTourComplete);
-      }
+        tour.off('cancel', onTourCancel);
+      };
     }
-  }, [startTutorial, tour, setStartTutorial, onComplete]);
+  }, [tour, onComplete]);
+
+
+  useEffect(() => {
+    if (startTutorial && tour) {
+      console.log('[TUTORIAL] Start tutorial signal received. Starting tour.');
+      tour.start();
+      setStartTutorial(false);
+    }
+  }, [startTutorial, tour, setStartTutorial]);
+
 
   return null;
 };

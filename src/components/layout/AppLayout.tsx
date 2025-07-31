@@ -40,7 +40,6 @@ import { useUserDataCache } from '@/contexts/UserDataCacheContext';
 import { useUserSession } from '@/contexts/UserSessionContext';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { OnboardingTutorialProvider, useOnboardingTutorial } from '@/contexts/OnboardingTutorialContext';
-import { InteractiveTutorial } from '../tutorial/InteractiveTutorial';
 
 const PUBLIC_PATHS = ['/landing', '/auth', '/pricing', '/about', '/contact', '/careers', '/partner-with-us', '/privacy-policy', '/terms-and-conditions', '/cookie-policy', '/refund-policy'];
 const BLOG_PATHS_REGEX = /^\/blog(\/.*)?$/;
@@ -71,7 +70,7 @@ function AppLayoutInner({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const { toast } = useToast();
   const { user: currentUser, isLoadingAuth: isLoadingAuthContext, initialAuthCheckCompleted } = useAuth();
-  const [themeState, setThemeState] = useState<'light' | 'dark'>('light');
+  const [theme, setThemeState] = useState<'light' | 'dark'>('light');
   const [favoriteJobOpenings, setFavoriteJobOpenings] = useState<JobOpening[]>([]);
   
   const { previousUserIdRef } = useUserSession(); 
@@ -83,17 +82,15 @@ function AppLayoutInner({ children }: { children: ReactNode }) {
     isLoadingSettings,
     setIsLoadingSettings: setGlobalIsLoadingSettings,
     hasFetchedSettingsOnce,
-    setHasFetchedSettingsOnce
+    setHasFetchedSettingsOnce,
   } = useUserSettings();
 
   const { setCounts, setIsLoadingCounts: setGlobalIsLoadingCounts } = useCounts();
   const { actualUserTier, subscriptionLoading } = useCurrentSubscription();
-  const { fetchAndCacheAllUserData, clearCache: clearUserDataCache, cachedData, isLoadingCache, updateCachedUserSettings, initialCacheLoadAttempted: initialCacheLoadAttemptedForContext } = useUserDataCache();
+  const { fetchAndCacheAllUserData, clearCache: clearUserDataCache, cachedData, isLoadingCache, initialCacheLoadAttempted: initialCacheLoadAttemptedForContext } = useUserDataCache();
 
-  const isPublicPath = PUBLIC_PATHS.includes(pathname) || BLOG_PATHS_REGEX.test(pathname);
   const [showOnboardingForm, setShowOnboardingForm] = useState(false);
-  const { startTutorial, setStartTutorial } = useOnboardingTutorial();
-  const [onboardingCheckComplete, setOnboardingCheckComplete] = useState(false);
+  const { setStartTutorial } = useOnboardingTutorial();
   
   useEffect(() => {
     setIsClientMounted(true);
@@ -137,9 +134,7 @@ function AppLayoutInner({ children }: { children: ReactNode }) {
     if (currentUser) {
       if (currentUser.id !== previousUserIdRef.current) {
         previousUserIdRef.current = currentUser.id; 
-        localStorage.removeItem('onboardingCompleted');
         setShowOnboardingForm(false);
-        setOnboardingCheckComplete(false);
         setGlobalUserSettings(null);
         setHasFetchedSettingsOnce(false);
         setFavoriteJobOpenings([]);
@@ -153,9 +148,7 @@ function AppLayoutInner({ children }: { children: ReactNode }) {
       }
     } else { 
       if (previousUserIdRef.current !== undefined && previousUserIdRef.current !== null) {
-        localStorage.removeItem('onboardingCompleted');
         setShowOnboardingForm(false);
-        setOnboardingCheckComplete(true);
         setGlobalUserSettings(null);
         setHasFetchedSettingsOnce(false); 
         setFavoriteJobOpenings([]);
@@ -163,57 +156,64 @@ function AppLayoutInner({ children }: { children: ReactNode }) {
         clearUserDataCache();
         previousUserIdRef.current = null; 
       } else {
-         setOnboardingCheckComplete(true);
          setGlobalIsLoadingSettings(false);
          setGlobalIsLoadingCounts(false);
       }
     }
-
-    if (currentUser && !isLoadingCache && initialCacheLoadAttemptedForContext) {
-      const settingsFromCache = cachedData?.userSettings || null;
-      setGlobalUserSettings(settingsFromCache); 
-      setHasFetchedSettingsOnce(true);
-      setGlobalIsLoadingSettings(false);
-
-      const countsFromCache = {
-        jobOpenings: (cachedData?.jobOpenings || []).length,
-        contacts: (cachedData?.contacts || []).length,
-        companies: (cachedData?.companies || []).length,
-      };
-      setCounts(countsFromCache);
-      setGlobalIsLoadingCounts(false); 
-      
-      const onboardingCompleteInDb = settingsFromCache?.onboarding_complete === true;
-      if (onboardingCompleteInDb) {
-        setShowOnboardingForm(false);
-        if (localStorage.getItem('onboardingCompleted') !== 'true') {
-            localStorage.setItem('onboardingCompleted', 'true');
-        }
-      } else {
-        if (settingsFromCache === null || !onboardingCompleteInDb) {
-            setShowOnboardingForm(true);
-            if (localStorage.getItem('onboardingCompleted') !== 'false') {
-                localStorage.setItem('onboardingCompleted', 'false');
-            }
-        } else {
-            setShowOnboardingForm(false);
-            setStartTutorial(true);
-        }
-      }
-      setOnboardingCheckComplete(true);
-    } else if (currentUser && isLoadingCache) {
-       setOnboardingCheckComplete(false);
-    }
   }, [
     currentUser, initialAuthCheckCompleted, 
-    cachedData, isLoadingCache, initialCacheLoadAttemptedForContext,
+    isLoadingCache, initialCacheLoadAttemptedForContext,
     processUserSession, 
     setGlobalUserSettings, setHasFetchedSettingsOnce, setGlobalIsLoadingSettings, 
     setCounts, setGlobalIsLoadingCounts, 
     clearUserDataCache,
-    previousUserIdRef,
-    setStartTutorial
+    previousUserIdRef
   ]);
+
+  useEffect(() => {
+    if (currentUser && !isLoadingCache && initialCacheLoadAttemptedForContext) {
+        const settingsFromCache = cachedData?.userSettings || null;
+        setGlobalUserSettings(settingsFromCache); 
+        setHasFetchedSettingsOnce(true);
+        setGlobalIsLoadingSettings(false);
+
+        const countsFromCache = {
+            jobOpenings: (cachedData?.jobOpenings || []).length,
+            contacts: (cachedData?.contacts || []).length,
+            companies: (cachedData?.companies || []).length,
+        };
+        setCounts(countsFromCache);
+        setGlobalIsLoadingCounts(false);
+    }
+  }, [currentUser, isLoadingCache, initialCacheLoadAttemptedForContext, cachedData, setGlobalUserSettings, setHasFetchedSettingsOnce, setGlobalIsLoadingSettings, setCounts, setGlobalIsLoadingCounts]);
+
+
+  useEffect(() => {
+    if (!isLoadingSettings && hasFetchedSettingsOnce && pathname === '/') {
+        const settings = userSettings;
+        const formIsComplete = settings?.full_name && settings?.current_role && settings?.age_range && settings?.country && settings?.how_heard;
+
+        if (settings?.onboarding_complete === false) {
+            if (formIsComplete) {
+                setShowOnboardingForm(false);
+                setStartTutorial(true);
+            } else {
+                setShowOnboardingForm(true);
+            }
+        } else {
+            setShowOnboardingForm(false);
+        }
+    }
+  }, [isLoadingSettings, hasFetchedSettingsOnce, userSettings, pathname, setStartTutorial]);
+  
+  const handleOnboardingFormComplete = (savedSettings: UserSettings) => {
+    setGlobalUserSettings(savedSettings);
+    setShowOnboardingForm(false);
+    if (pathname === '/') {
+      setStartTutorial(true);
+    }
+  };
+
 
   useEffect(() => {
     if (cachedData?.jobOpenings) {
@@ -230,6 +230,8 @@ function AppLayoutInner({ children }: { children: ReactNode }) {
     }
   }, [cachedData?.jobOpenings]);
 
+  const isPublicPath = PUBLIC_PATHS.includes(pathname) || BLOG_PATHS_REGEX.test(pathname);
+  
   useEffect(() => {
     if (!isLoadingAuthContext && initialAuthCheckCompleted && !isPublicPath && !currentUser) {
       router.push('/landing');
@@ -240,32 +242,9 @@ function AppLayoutInner({ children }: { children: ReactNode }) {
     await supabase.auth.signOut();
     toast({ title: 'Signed Out', description: 'You have been signed out.' });
   };
-
-  const handleOnboardingFormComplete = (savedSettings: UserSettings) => {
-    setGlobalUserSettings(savedSettings);
-    updateCachedUserSettings(savedSettings);
-    setShowOnboardingForm(false);
-    setStartTutorial(true);
-  };
-
-  const handleTutorialComplete = async () => {
-    setStartTutorial(false);
-    localStorage.setItem('onboardingCompleted', 'true');
-    if (currentUser) {
-      const { error } = await supabase
-        .from('user_settings')
-        .update({ onboarding_complete: true })
-        .eq('user_id', currentUser.id);
-      if (error) {
-        toast({ title: 'Error saving tutorial status', description: error.message, variant: 'destructive' });
-      } else {
-        updateCachedUserSettings({ ...userSettings, onboarding_complete: true } as UserSettings);
-      }
-    }
-  };
   
   const isLoadingInitialUserAndAuth = isLoadingAuthContext || !initialAuthCheckCompleted;
-  const isAppLoadingForAuthenticatedUser = currentUser != null && (isLoadingCache || !initialCacheLoadAttemptedForContext || !onboardingCheckComplete);
+  const isAppLoadingForAuthenticatedUser = currentUser != null && (isLoadingCache || !initialCacheLoadAttemptedForContext);
   
   const toggleTheme = () => {
     setThemeState(prevTheme => {
@@ -323,126 +302,124 @@ function AppLayoutInner({ children }: { children: ReactNode }) {
   const menuItemClass = "relative flex cursor-pointer select-none items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none transition-colors hover:bg-accent hover:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50";
 
   return (
-    <TooltipProvider>
-      <SidebarProvider defaultOpen>
-        <Sidebar variant="sidebar" collapsible="icon" className="border-r">
-          <SidebarHeader className="p-4 items-center flex justify-between">
-            <Link href="/" passHref>
-              <Logo className="group-data-[collapsible=icon]:hidden" />
-            </Link>
-            <SidebarTrigger className="group-data-[collapsible=icon]:hidden md:hidden hover:bg-transparent focus-visible:bg-transparent hover:text-primary" />
-          </SidebarHeader>
-          <SidebarContent>
-            <SidebarNav favoriteJobOpenings={favoriteJobOpenings} />
-          </SidebarContent>
-          <SidebarFooter
-            className={cn(
-              "flex flex-col justify-start",
-              "p-2 group-data-[collapsible=icon]:pt-1 group-data-[collapsible=icon]:pb-2 group-data-[collapsible=icon]:pl-2 group-data-[collapsible=icon]:pr-2"
-          )}>
-            <SidebarUsageProgress user={currentUser} />
-            <div className={cn("mt-4 flex items-center", "group-data-[collapsible=icon]:justify-center justify-start")}>
-              {/* @ts-ignore */}
-              <Around
-                toggled={themeState === 'dark'}
-                toggle={toggleTheme}
-                title="Toggle theme"
-                aria-label="Toggle theme"
-                className={cn(
-                    "theme-toggle",
-                    "text-xl text-sidebar-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring focus-visible:ring-offset-1 focus-visible:ring-offset-sidebar-background hover:text-sidebar-foreground",
-                    "w-auto",
-                    "group-data-[collapsible=icon]:mx-auto group-data-[collapsible=icon]:p-0"
-                )}
-                style={{ '--theme-toggle__around--duration': '500ms' } as React.CSSProperties}
-              />
-            </div>
-          </SidebarFooter>
-        </Sidebar>
-        <SidebarInset className="bg-background">
-          <header className="sticky top-0 z-40 flex h-16 items-center justify-between gap-4 border-b bg-background/80 backdrop-blur-sm px-4 md:px-6 shadow-sm">
-              <div className="flex items-center gap-4">
-                  <SidebarTrigger className="md:hidden hover:bg-transparent focus-visible:bg-transparent hover:text-primary" />
+      <TooltipProvider>
+        <SidebarProvider defaultOpen>
+          <Sidebar variant="sidebar" collapsible="icon" className="border-r">
+            <SidebarHeader className="p-4 items-center flex justify-between">
+              <Link href="/" passHref>
+                <Logo className="group-data-[collapsible=icon]:hidden" />
+              </Link>
+              <SidebarTrigger className="group-data-[collapsible=icon]:hidden md:hidden hover:bg-transparent focus-visible:bg-transparent hover:text-primary" />
+            </SidebarHeader>
+            <SidebarContent>
+              <SidebarNav favoriteJobOpenings={favoriteJobOpenings} />
+            </SidebarContent>
+            <SidebarFooter
+              className={cn(
+                "flex flex-col justify-start",
+                "p-2 group-data-[collapsible=icon]:pt-1 group-data-[collapsible=icon]:pb-2 group-data-[collapsible=icon]:pl-2 group-data-[collapsible=icon]:pr-2"
+            )}>
+              <SidebarUsageProgress user={currentUser} />
+              <div className={cn("mt-4 flex items-center", "group-data-[collapsible=icon]:justify-center justify-start")}>
+                {/* @ts-ignore */}
+                <Around
+                  toggled={theme === 'dark'}
+                  toggle={toggleTheme}
+                  title="Toggle theme"
+                  aria-label="Toggle theme"
+                  className={cn(
+                      "theme-toggle",
+                      "text-xl text-sidebar-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring focus-visible:ring-offset-1 focus-visible:ring-offset-sidebar-background hover:text-sidebar-foreground",
+                      "w-auto",
+                      "group-data-[collapsible=icon]:mx-auto group-data-[collapsible=icon]:p-0"
+                  )}
+                  style={{ '--theme-toggle__around--duration': '500ms' } as React.CSSProperties}
+                />
               </div>
-              <HoverCard openDelay={0} closeDelay={200}>
-                  <HoverCardTrigger asChild>
-                      <Button
-                          variant="ghost"
-                          className={cn(
-                              "relative h-9 w-9 rounded-full p-0 focus-visible:outline-none border-none",
-                              "ring-2 ring-primary ring-offset-2 ring-offset-background hover:ring-ring"
-                          )}
-                      >
-                          <Avatar className="h-9 w-9">
-                          <AvatarFallback className="bg-primary text-primary-foreground font-medium">
-                              {isLoadingAuthContext || isLoadingSettings ? <Loader2 className="h-4 w-4 animate-spin" /> : userInitials}
-                          </AvatarFallback>
-                          </Avatar>
-                           {(actualUserTier === 'pro' || actualUserTier === 'business') && !subscriptionLoading && (
-                              <Crown className="absolute -bottom-1 -right-1 h-4 w-4 text-yellow-500" fill="currentColor"/>
-                          )}
-                      </Button>
-                  </HoverCardTrigger>
-                  <HoverCardContent align="end" className="w-56 p-1" sideOffset={8}>
-                      <div className={cn("font-normal px-2 py-1.5")}>
-                          <div className="flex flex-col space-y-1">
-                          <p className="text-sm font-medium leading-none truncate">{isLoadingSettings ? "Loading name..." : userDisplayNameToShow}</p>
-                          {currentUser.email && <p className="text-xs leading-none text-muted-foreground truncate">{currentUser.email}</p>}
-                          </div>
-                      </div>
-                      <div className="my-1 h-px bg-muted" />
-                      <Link href="/landing" passHref legacyBehavior>
-                          <a className={cn(menuItemClass, "cursor-pointer")}>
-                          <Home className="mr-2 h-4 w-4" />
-                          <span>Homepage</span>
-                          </a>
-                      </Link>
-                      {showDashboardLinkInMenu && (
-                           <Link href="/" passHref legacyBehavior>
-                              <a className={cn(menuItemClass, "cursor-pointer")}>
-                              <LayoutDashboard className="mr-2 h-4 w-4" />
-                              <span>Dashboard</span>
-                              </a>
-                          </Link>
-                      )}
-                      <Link href="/settings/account" passHref legacyBehavior>
-                          <a className={cn(menuItemClass, "cursor-pointer")}>
-                          <Settings className="mr-2 h-4 w-4" />
-                          <span>Settings</span>
-                          </a>
-                      </Link>
-                      <Link href="/settings/billing" passHref legacyBehavior>
-                          <a className={cn(menuItemClass, "cursor-pointer")}>
-                          <CreditCard className="mr-2 h-4 w-4" />
-                          <span>Billing & Plan</span>
-                          </a>
-                      </Link>
-                      <div className="my-1 h-px bg-muted" />
-                      <button
-                          onClick={handleSignOut}
-                          className={cn(menuItemClass, "text-destructive hover:bg-destructive/20 hover:text-destructive focus:bg-destructive/20 focus:text-destructive cursor-pointer w-full")}
-                      >
-                          <LogOut className="mr-2 h-4 w-4" />
-                          <span>Sign Out</span>
-                      </button>
-                  </HoverCardContent>
-                </HoverCard>
-          </header>
-          <main className="flex-1 p-4 md:p-6 lg:p-8">
-            {children}
-            <InteractiveTutorial onTutorialComplete={handleTutorialComplete}/>
-          </main>
-        </SidebarInset>
-      </SidebarProvider>
-    </TooltipProvider>
+            </SidebarFooter>
+          </Sidebar>
+          <SidebarInset className="bg-background">
+            <header className="sticky top-0 z-40 flex h-16 items-center justify-between gap-4 border-b bg-background/80 backdrop-blur-sm px-4 md:px-6 shadow-sm">
+                <div className="flex items-center gap-4">
+                    <SidebarTrigger className="md:hidden hover:bg-transparent focus-visible:bg-transparent hover:text-primary" />
+                </div>
+                <HoverCard openDelay={0} closeDelay={200}>
+                    <HoverCardTrigger asChild>
+                        <Button
+                            variant="ghost"
+                            className={cn(
+                                "relative h-9 w-9 rounded-full p-0 focus-visible:outline-none border-none",
+                                "ring-2 ring-primary ring-offset-2 ring-offset-background hover:ring-ring"
+                            )}
+                        >
+                            <Avatar className="h-9 w-9">
+                            <AvatarFallback className="bg-primary text-primary-foreground font-medium">
+                                {isLoadingAuthContext || isLoadingSettings ? <Loader2 className="h-4 w-4 animate-spin" /> : userInitials}
+                            </AvatarFallback>
+                            </Avatar>
+                            {(actualUserTier === 'pro' || actualUserTier === 'business') && !subscriptionLoading && (
+                                <Crown className="absolute -bottom-1 -right-1 h-4 w-4 text-yellow-500" fill="currentColor"/>
+                            )}
+                        </Button>
+                    </HoverCardTrigger>
+                    <HoverCardContent align="end" className="w-56 p-1" sideOffset={8}>
+                        <div className={cn("font-normal px-2 py-1.5")}>
+                            <div className="flex flex-col space-y-1">
+                            <p className="text-sm font-medium leading-none truncate">{isLoadingSettings ? "Loading name..." : userDisplayNameToShow}</p>
+                            {currentUser.email && <p className="text-xs leading-none text-muted-foreground truncate">{currentUser.email}</p>}
+                            </div>
+                        </div>
+                        <div className="my-1 h-px bg-muted" />
+                        <Link href="/landing" passHref legacyBehavior>
+                            <a className={cn(menuItemClass, "cursor-pointer")}>
+                            <Home className="mr-2 h-4 w-4" />
+                            <span>Homepage</span>
+                            </a>
+                        </Link>
+                        {showDashboardLinkInMenu && (
+                            <Link href="/" passHref legacyBehavior>
+                                <a className={cn(menuItemClass, "cursor-pointer")}>
+                                <LayoutDashboard className="mr-2 h-4 w-4" />
+                                <span>Dashboard</span>
+                                </a>
+                            </Link>
+                        )}
+                        <Link href="/settings/account" passHref legacyBehavior>
+                            <a className={cn(menuItemClass, "cursor-pointer")}>
+                            <Settings className="mr-2 h-4 w-4" />
+                            <span>Settings</span>
+                            </a>
+                        </Link>
+                        <Link href="/settings/billing" passHref legacyBehavior>
+                            <a className={cn(menuItemClass, "cursor-pointer")}>
+                            <CreditCard className="mr-2 h-4 w-4" />
+                            <span>Billing & Plan</span>
+                            </a>
+                        </Link>
+                        <div className="my-1 h-px bg-muted" />
+                        <button
+                            onClick={handleSignOut}
+                            className={cn(menuItemClass, "text-destructive hover:bg-destructive/20 hover:text-destructive focus:bg-destructive/20 focus:text-destructive cursor-pointer w-full")}
+                        >
+                            <LogOut className="mr-2 h-4 w-4" />
+                            <span>Sign Out</span>
+                        </button>
+                    </HoverCardContent>
+                  </HoverCard>
+            </header>
+            <main className="flex-1 p-4 md:p-6 lg:p-8">
+              {children}
+            </main>
+          </SidebarInset>
+        </SidebarProvider>
+      </TooltipProvider>
   );
 }
 
 export function AppLayout({ children }: { children: ReactNode }) {
-  // We no longer need to wrap children with providers here as they are in RootLayout
   return (
-      <OnboardingTutorialProvider>
-        <AppLayoutInner>{children}</AppLayoutInner>
-      </OnboardingTutorialProvider>
+    <OnboardingTutorialProvider>
+      <AppLayoutInner>{children}</AppLayoutInner>
+    </OnboardingTutorialProvider>
   );
 }

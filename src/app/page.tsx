@@ -10,7 +10,7 @@ import Link from "next/link";
 import type { JobOpening, Contact, Company, FollowUp, UserSettings } from '@/lib/types';
 import { isToday, isThisWeek, format, subDays, eachDayOfInterval, isEqual, startOfDay, isValid } from 'date-fns';
 import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartConfig } from "@/components/ui/chart";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer } from 'recharts';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer } from 'recharts';
 import { supabase } from '@/lib/supabaseClient';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -19,6 +19,8 @@ import { useUserSettings } from '@/contexts/UserSettingsContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCounts } from '@/contexts/CountsContext';
 import { useUserDataCache } from '@/contexts/UserDataCacheContext';
+import { useOnboardingTutorial } from '@/contexts/OnboardingTutorialContext';
+import { InteractiveTutorial } from '@/components/tutorial/InteractiveTutorial';
 
 const initialEmailSentStatuses: JobOpening['status'][] = [
   'Emailed', 'Followed Up - Once', 'Followed Up - Twice', 'Followed Up - Thrice',
@@ -43,7 +45,7 @@ const openingsAddedChartConfig = {
 function DashboardPageContent() {
   const { user: currentUser, isLoadingAuth: isLoadingUserAuth, initialAuthCheckCompleted } = useAuth();
   const { counts: globalCounts, isLoadingCounts: isLoadingGlobalCounts } = useCounts();
-  const { cachedData, isLoadingCache, initialCacheLoadAttempted } = useUserDataCache();
+  const { cachedData, isLoadingCache, initialCacheLoadAttempted, updateCachedUserSettings } = useUserDataCache();
 
   const [stats, setStats] = useState({ followUpsToday: 0, followUpsThisWeek: 0 });
   const [emailsSentData, setEmailsSentData] = useState<ChartDataPoint[]>([]);
@@ -51,18 +53,43 @@ function DashboardPageContent() {
   
   const [isProcessingDashboardData, setIsProcessingDashboardData] = useState(true);
 
-  const { userSettings, isLoadingSettings: isLoadingContextSettings, hasFetchedSettingsOnce } = useUserSettings();
   const { toast } = useToast();
   const router = useRouter();
   const searchParamsInstance = useNextSearchParams();
+  
+  const handleTutorialComplete = useCallback(async () => {
+    console.log('[page.tsx] handleTutorialComplete called.');
+    if (currentUser) {
+      console.log('[page.tsx] Current user found:', currentUser.id);
+      
+      const updatePayload = { onboarding_complete: true };
+      console.log('[page.tsx] Preparing to update user_settings with payload:', updatePayload);
 
-  // This effect handles the case where a user lands on the dashboard
-  // after clicking a confirmation link, which contains auth tokens in the hash.
-  useEffect(() => {
-    if (typeof window !== 'undefined' && window.location.hash.includes('access_token') && window.location.hash.includes('refresh_token')) {
-      router.push('/auth');
+      const { data, error } = await supabase
+        .from('user_settings')
+        .update(updatePayload)
+        .eq('user_id', currentUser.id)
+        .select()
+        .single();
+        
+      console.log('[page.tsx] Supabase update call finished.');
+
+      if (error) {
+        console.error('[page.tsx] Error updating tutorial status:', error);
+        toast({ title: 'Error saving tutorial status', description: error.message, variant: 'destructive' });
+      }
+      if (data) {
+        console.log('[page.tsx] Successfully updated user_settings. Response data:', data);
+        updateCachedUserSettings(data as UserSettings);
+        console.log('[page.tsx] Local cache updated with new settings.');
+      } else {
+        console.log('[page.tsx] No data returned from update, but no error either.');
+      }
+    } else {
+        console.warn('[page.tsx] handleTutorialComplete called, but no currentUser was found.');
     }
-  }, [router]);
+  }, [currentUser, toast, updateCachedUserSettings]);
+
 
   const processDashboardDataFromCache = useCallback(() => {
     if (!cachedData || !cachedData.jobOpenings) {
@@ -176,16 +203,15 @@ function DashboardPageContent() {
   const isStillLoadingContent = isLoadingUserAuth || !initialAuthCheckCompleted || isLoadingCache || isLoadingGlobalCounts || isProcessingDashboardData;
 
   if (isLoadingUserAuth || !initialAuthCheckCompleted) {
-    return (<AppLayout><div className="flex justify-center items-center h-64"><Loader2 className="h-12 w-12 animate-spin text-primary" /></div></AppLayout>);
+    return (<div className="flex justify-center items-center h-64"><Loader2 className="h-12 w-12 animate-spin text-primary" /></div>);
   }
   
   if (!currentUser) {
-    // This case should ideally be handled by AppLayout now, but as a fallback:
-    return (<AppLayout><Card><CardHeader><CardTitle>Access Denied</CardTitle></CardHeader><CardContent><p>Please log in to view your dashboard.</p><Button onClick={() => router.push('/auth')} className="mt-4">Sign In</Button></CardContent></Card></AppLayout>);
+    return (<Card><CardHeader><CardTitle>Access Denied</CardTitle></CardHeader><CardContent><p>Please log in to view your dashboard.</p><Button onClick={() => router.push('/auth')} className="mt-4">Sign In</Button></CardContent></Card>);
   }
   
   return (
-    <AppLayout>
+    <>
       <div className="space-y-6" id="dashboard-main-content-area">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div> <h2 className="text-3xl font-bold tracking-tight font-headline">Dashboard</h2> <p className="text-muted-foreground">Welcome back! Here's an overview of your prospects.</p> </div>
@@ -201,19 +227,68 @@ function DashboardPageContent() {
             <Card className="shadow-lg"> <CardHeader> <CardTitle className="font-headline flex items-center"> <Users className="mr-2 h-5 w-5 text-primary" /> Total Contacts </CardTitle> <CardDescription>Your professional network.</CardDescription> </CardHeader> <CardContent> <div className="flex items-center"> <span className="text-3xl font-bold">{globalCounts.contacts}</span> <span className="ml-2 text-sm text-muted-foreground">contacts</span> </div> {(globalCounts.contacts === 0) && ( <p className="text-sm text-muted-foreground mt-2"> No contacts added yet. </p> )} </CardContent> </Card>
             <Card className="shadow-lg"> <CardHeader> <CardTitle className="font-headline flex items-center"> <Building2 className="mr-2 h-5 w-5 text-primary" /> Total Companies </CardTitle> <CardDescription>Companies in your directory.</CardDescription> </CardHeader> <CardContent> <div className="flex items-center"> <span className="text-3xl font-bold">{globalCounts.companies}</span> <span className="ml-2 text-sm text-muted-foreground">companies</span> </div> {(globalCounts.companies === 0) && ( <p className="text-sm text-muted-foreground mt-2"> No companies added yet. </p> )} </CardContent> </Card>
             <Card className="shadow-lg lg:col-span-1"> <CardHeader> <CardTitle className="font-headline">Quick Links</CardTitle> <CardDescription>Navigate to key sections quickly.</CardDescription> </CardHeader> <CardContent className="grid grid-cols-1 gap-3"> <Link href="/blog" passHref> <Button variant="outline" className="w-full justify-start"> <Rss className="mr-2 h-4 w-4" /> Visit Our Blog </Button> </Link> <Link href="/contact" passHref> <Button variant="outline" className="w-full justify-start"> <MailIcon className="mr-2 h-4 w-4" /> Contact Us </Button> </Link> <Link href="/partner-with-us" passHref> <Button variant="outline" className="w-full justify-start"> <Handshake className="mr-2 h-4 w-4" /> Partner With Us </Button> </Link> </CardContent> </Card>
-            <Card className="shadow-lg lg:col-span-3"> <CardHeader> <CardTitle className="font-headline flex items-center"> <MailOpen className="mr-2 h-5 w-5 text-primary" /> Emails Sent Per Day (Last 30 Days) </CardTitle> </CardHeader> <CardContent> {(!Array.isArray(emailsSentData) || emailsSentData.filter(d => d.count > 0).length === 0) ? ( <p className="text-sm text-muted-foreground h-[300px] flex items-center justify-center">No email data to display for the last 30 days.</p> ) : ( <ChartContainer config={emailsSentChartConfig} className="h-[300px] w-full"> <BarChart accessibilityLayer data={emailsSentData} margin={{ top: 5, right: 20, left: -20, bottom: 5 }}> <CartesianGrid vertical={false} strokeDasharray="3 3" /> <XAxis dataKey="displayDate" tickLine={false} axisLine={false} tickMargin={8} tickFormatter={(value, index) => { if (emailsSentData.length > 10 && index % 3 !== 0 && index !== 0 && index !== emailsSentData.length -1) return ''; return value; }} /> <YAxis tickLine={false} axisLine={false} tickMargin={8} allowDecimals={false} /> <ChartTooltip cursor={false} content={<ChartTooltipContent indicator="dot" />} /> <Bar dataKey="count" fill="var(--color-emails)" radius={4} /> </BarChart> </ChartContainer> )} </CardContent> </Card>
-            <Card className="shadow-lg lg:col-span-3"> <CardHeader> <CardTitle className="font-headline flex items-center"> <BarChart2 className="mr-2 h-5 w-5 text-primary" /> Leads Added Per Day (Last 30 Days) </CardTitle> </CardHeader> <CardContent> {(!Array.isArray(openingsAddedData) || openingsAddedData.filter(d => d.count > 0).length === 0) ? ( <p className="text-sm text-muted-foreground h-[300px] flex items-center justify-center">No new leads data to display for the last 30 days.</p> ): ( <ChartContainer config={openingsAddedChartConfig} className="h-[300px] w-full"> <BarChart accessibilityLayer data={openingsAddedData} margin={{ top: 5, right: 20, left: -20, bottom: 5 }}> <CartesianGrid vertical={false} strokeDasharray="3 3" /> <XAxis dataKey="displayDate" tickLine={false} axisLine={false} tickMargin={8} tickFormatter={(value, index) => { if (openingsAddedData.length > 10 && index % 3 !== 0 && index !== 0 && index !== openingsAddedData.length -1) return ''; return value; }} /> <YAxis tickLine={false} axisLine={false} tickMargin={8} allowDecimals={false} /> <ChartTooltip cursor={false} content={<ChartTooltipContent indicator="dot" />} /> <Bar dataKey="count" fill="var(--color-leads)" radius={4} /> </BarChart> </ChartContainer> )} </CardContent> </Card>
+            <Card className="shadow-lg lg:col-span-3">
+              <CardHeader> <CardTitle className="font-headline flex items-center"> <MailOpen className="mr-2 h-5 w-5 text-primary" /> Emails Sent Per Day (Last 30 Days) </CardTitle> </CardHeader>
+              <CardContent>
+                {(!Array.isArray(emailsSentData) || emailsSentData.filter(d => d.count > 0).length === 0) ? (
+                  <p className="text-sm text-muted-foreground h-[300px] flex items-center justify-center">No email data to display for the last 30 days.</p>
+                ) : (
+                  <ChartContainer config={emailsSentChartConfig} className="h-[300px] w-full">
+                    <AreaChart accessibilityLayer data={emailsSentData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+                      <CartesianGrid vertical={false} strokeDasharray="3 3" />
+                      <XAxis dataKey="displayDate" tickLine={false} axisLine={false} tickMargin={8} tickFormatter={(value, index) => { if (emailsSentData.length > 10 && index % 3 !== 0 && index !== 0 && index !== emailsSentData.length -1) return ''; return value; }} />
+                      <YAxis tickLine={false} axisLine={false} tickMargin={8} allowDecimals={false} />
+                      <ChartTooltip cursor={true} content={<ChartTooltipContent indicator="dot" />} />
+                      <defs>
+                        <linearGradient id="fillEmails" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="var(--color-emails)" stopOpacity={0.8}/>
+                          <stop offset="95%" stopColor="var(--color-emails)" stopOpacity={0.1}/>
+                        </linearGradient>
+                      </defs>
+                      <Area type="monotone" dataKey="count" stroke="var(--color-emails)" strokeWidth={2} fillOpacity={1} fill="url(#fillEmails)" />
+                    </AreaChart>
+                  </ChartContainer>
+                )}
+              </CardContent>
+            </Card>
+             <Card className="shadow-lg lg:col-span-3">
+              <CardHeader> <CardTitle className="font-headline flex items-center"> <BarChart2 className="mr-2 h-5 w-5 text-primary" /> Leads Added Per Day (Last 30 Days) </CardTitle> </CardHeader>
+              <CardContent>
+                {(!Array.isArray(openingsAddedData) || openingsAddedData.filter(d => d.count > 0).length === 0) ? (
+                  <p className="text-sm text-muted-foreground h-[300px] flex items-center justify-center">No new leads data to display for the last 30 days.</p>
+                ) : (
+                  <ChartContainer config={openingsAddedChartConfig} className="h-[300px] w-full">
+                     <AreaChart accessibilityLayer data={openingsAddedData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+                      <CartesianGrid vertical={false} strokeDasharray="3 3" />
+                      <XAxis dataKey="displayDate" tickLine={false} axisLine={false} tickMargin={8} tickFormatter={(value, index) => { if (openingsAddedData.length > 10 && index % 3 !== 0 && index !== 0 && index !== openingsAddedData.length -1) return ''; return value; }} />
+                      <YAxis tickLine={false} axisLine={false} tickMargin={8} allowDecimals={false} />
+                      <ChartTooltip cursor={true} content={<ChartTooltipContent indicator="dot" />} />
+                       <defs>
+                        <linearGradient id="fillLeads" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="var(--color-leads)" stopOpacity={0.8}/>
+                          <stop offset="95%" stopColor="var(--color-leads)" stopOpacity={0.1}/>
+                        </linearGradient>
+                      </defs>
+                      <Area type="monotone" dataKey="count" stroke="var(--color-leads)" strokeWidth={2} fillOpacity={1} fill="url(#fillLeads)" />
+                    </AreaChart>
+                  </ChartContainer>
+                )}
+              </CardContent>
+            </Card>
           </div>
         )}
       </div>
-    </AppLayout>
+      <InteractiveTutorial onTutorialComplete={handleTutorialComplete}/>
+    </>
   );
 }
 
 export default function DashboardPage() {
   return (
-    <Suspense fallback={<AppLayout><div className="flex w-full h-full items-center justify-center"><Loader2 className="h-12 w-12 animate-spin text-primary" /></div></AppLayout>}>
-      <DashboardPageContent />
-    </Suspense>
+    <AppLayout>
+      <Suspense fallback={<div className="flex w-full h-full items-center justify-center"><Loader2 className="h-12 w-12 animate-spin text-primary" /></div>}>
+          <DashboardPageContent />
+      </Suspense>
+    </AppLayout>
   );
 }

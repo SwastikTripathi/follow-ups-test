@@ -80,6 +80,31 @@ async function determineNewLeadStatusOnServer(
   return currentLeadStatus;
 }
 
+const TutorialStepDialog = ({ isOpen, onOpenChange }: { isOpen: boolean, onOpenChange: (open: boolean) => void }) => (
+    <Dialog open={isOpen} onOpenChange={onOpenChange}>
+        <DialogContent>
+            <DialogHeader>
+                <DialogTitle className="font-headline text-xl">The Add Lead Form</DialogTitle>
+                <DialogDescription>
+                    This is where you can add all the details about your new lead.
+                </DialogDescription>
+            </DialogHeader>
+            <div className="text-sm space-y-2 py-2">
+                <p>Here you can:</p>
+                <ul className="list-disc pl-5 space-y-1 text-muted-foreground">
+                    <li>Enter the company and role title.</li>
+                    <li>Link one or more contacts.</li>
+                    <li>Set the initial outreach date.</li>
+                    <li>Draft your initial email and follow-up templates.</li>
+                    <li>Add any relevant notes or links.</li>
+                </ul>
+                <p className="pt-2">When you're done, just click "Add Lead" to save it.</p>
+            </div>
+        </DialogContent>
+    </Dialog>
+);
+
+
 function LeadsPageContent() {
   const router = useRouter();
   const { user: currentUser, isLoadingAuth: isLoadingUserAuth, initialAuthCheckCompleted } = useAuth();
@@ -104,6 +129,8 @@ function LeadsPageContent() {
   const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
   const [addDialogPrefill, setAddDialogPrefill] = useState<Partial<AddLeadFormValues> | undefined>(undefined);
   const [isGenerateLeadFromJDOpen, setIsGenerateLeadFromJDOpen] = useState(false);
+
+  const [isTutorialStepOpen, setIsTutorialStepOpen] = useState(false);
 
 
   const { toast } = useToast();
@@ -133,6 +160,18 @@ function LeadsPageContent() {
       setContacts([]);
     }
   }, [currentUser, initialAuthCheckCompleted, isLoadingCache, initialCacheLoadAttempted, cachedData]);
+
+  useEffect(() => {
+    const isTutorialNextStep = searchParams?.get('tutorialStep') === 'add-lead-form';
+    if (isTutorialNextStep) {
+        setIsTutorialStepOpen(true);
+        // Clean up URL
+        const newUrl = new URL(window.location.href);
+        newUrl.searchParams.delete('tutorialStep');
+        router.replace(newUrl.pathname + newUrl.search, { scroll: false });
+    }
+  }, [searchParams, router]);
+
 
   const handleAddWithAIClick = () => {
     if (!isApiKeyLoaded) return;
@@ -831,6 +870,7 @@ function LeadsPageContent() {
                 onApiKeySubmit={handleApiKeySubmitted}
             />
         )}
+      <TutorialStepDialog isOpen={isTutorialStepOpen} onOpenChange={setIsTutorialStepOpen} />
       </div>
     </AppLayout>
   );

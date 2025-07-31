@@ -10,12 +10,12 @@ html {
 }
 
 body {
-  font-family: 'Inter', sans-serif; 
+  font-family: 'PT Sans', sans-serif; 
   @apply leading-relaxed antialiased; 
 }
 
 h1, h2, h3, h4, h5, h6 {
-  font-family: 'Inter', sans-serif; 
+  font-family: 'Playfair Display', serif; 
 }
 
 @layer base {
@@ -65,21 +65,6 @@ h1, h2, h3, h4, h5, h6 {
     --chart-3: 197 37% 24%;
     --chart-4: 43 74% 66%;
     --chart-5: 27 87% 67%;
-
-    /* React Joyride Custom Styling */
-    --joyride-arrow-color: hsl(var(--card)); 
-    --joyride-beacon-inner-color: hsl(var(--primary)); 
-    --joyride-beacon-outer-color: hsl(var(--primary) / 0.3); 
-    --joyride-tooltip-background-color: hsl(var(--card)); 
-    --joyride-tooltip-button-background-color: hsl(var(--primary)); 
-    --joyride-tooltip-button-text-color: hsl(var(--primary-foreground)); 
-    --joyride-tooltip-primary-button-background-color: hsl(var(--primary));
-    --joyride-tooltip-primary-button-text-color: hsl(var(--primary-foreground));
-    --joyride-tooltip-skip-button-color: hsl(var(--muted-foreground)); 
-    --joyride-tooltip-text-color: hsl(var(--card-foreground)); 
-    --joyride-tooltip-title-color: hsl(var(--card-foreground)); 
-    --joyride-tooltip-footer-background-color: hsl(var(--card)); 
-    --joyride-overlay-color: hsl(0 0% 0% / 0.6); /* Dark overlay for light mode */
   }
 
   .dark {
@@ -126,21 +111,6 @@ h1, h2, h3, h4, h5, h6 {
     --chart-3: 30 80% 55%;
     --chart-4: 280 65% 60%;
     --chart-5: 340 75% 55%;
-
-    /* React Joyride Custom Styling - Dark Mode */
-    --joyride-arrow-color: hsl(var(--card));
-    --joyride-beacon-inner-color: hsl(var(--primary));
-    --joyride-beacon-outer-color: hsl(var(--primary) / 0.4);
-    --joyride-tooltip-background-color: hsl(var(--card));
-    --joyride-tooltip-button-background-color: hsl(var(--primary));
-    --joyride-tooltip-button-text-color: hsl(var(--primary-foreground));
-    --joyride-tooltip-primary-button-background-color: hsl(var(--primary));
-    --joyride-tooltip-primary-button-text-color: hsl(var(--primary-foreground));
-    --joyride-tooltip-skip-button-color: hsl(var(--muted-foreground));
-    --joyride-tooltip-text-color: hsl(var(--card-foreground));
-    --joyride-tooltip-title-color: hsl(var(--card-foreground));
-    --joyride-tooltip-footer-background-color: hsl(var(--card));
-    --joyride-overlay-color: hsl(var(--background) / 0.7); 
   }
 }
 
@@ -189,96 +159,16 @@ h1, h2, h3, h4, h5, h6 {
   }
 }
 
-/* React Joyride Base Styles */
-.react-joyride__overlay {
-  background-color: var(--joyride-overlay-color) !important;
-  /* pointer-events: auto; Default - blocks clicks */
-  z-index: 9998 !important; 
-}
-.__floater, .__floater__container { 
-  filter: none !important; 
-  z-index: 10000 !important; 
+/* --- Shepherd.js Tutorial Customizations --- */
+
+/* Force the modal overlay to intercept clicks, which is its purpose.
+   The default Shepherd CSS can sometimes set this to 'none'. */
+.shepherd-modal-overlay-container {
+  pointer-events: auto !important;
 }
 
-.__floater__arrow > div {
-  background-color: var(--joyride-arrow-color) !important;
-  border: none !important;
-  position: relative !important;
-  transform: translateX(0px) translateY(0px) !important;
+/* When a target is not meant to be clicked, Shepherd adds this class. 
+   We disable pointer events on the target itself to be safe. */
+.shepherd-target.shepherd-target-click-disabled {
+    pointer-events: none;
 }
-
-.__floater__body { 
-  background-color: var(--joyride-tooltip-background-color) !important;
-  color: var(--joyride-tooltip-text-color) !important;
-  border-radius: var(--radius) !important;
-  border: none !important; 
-  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1) !important;
-}
-.__floater__title {
-  color: var(--joyride-tooltip-title-color) !important;
-  font-weight: 600 !important;
-  font-size: 1.125rem !important; 
-  border-bottom: 1px solid hsl(var(--border)) !important;
-  padding-bottom: 0.5rem !important;
-  margin-bottom: 0.75rem !important;
-}
-.__floater__footer {
-  background-color: var(--joyride-tooltip-footer-background-color) !important;
-  border-top: 1px solid hsl(var(--border)) !important;
-  margin-top: 1rem !important;
-  padding-top: 0.75rem !important;
-}
-.__floater__button--primary {
-  background-color: var(--joyride-tooltip-primary-button-background-color) !important;
-  color: var(--joyride-tooltip-primary-button-text-color) !important;
-  border-radius: calc(var(--radius) - 2px) !important; 
-  padding: 0.5rem 1rem !important;
-  font-size: 0.875rem !important; 
-}
-.__floater__button--primary:hover {
-  opacity: 0.9 !important;
-}
-.__floater__button--skip { 
-  color: var(--joyride-tooltip-skip-button-color) !important;
-  font-size: 0.875rem !important; 
-  padding: 0.5rem 1rem !important;
-  border-radius: calc(var(--radius) - 2px) !important;
-  background-color: transparent !important; 
-}
-.__floater__button--skip:hover {
-    text-decoration: underline !important;
-    color: hsl(var(--foreground)) !important;
-}
-.__floater__close { 
-  display: none !important;
-}
-.react-joyride__beacon span {
-  background-color: var(--joyride-beacon-inner-color) !important;
-}
-.react-joyride__beacon span:after {
-  background-color: var(--joyride-beacon-outer-color) !important;
-  border: 2px solid var(--joyride-beacon-inner-color) !important;
-}
-
-.react-joyride__spotlight {
-  border-radius: 6px; 
-  z-index: 9999 !important; 
-  /* pointer-events: auto; Default - part of blocking overlay */
-}
-
-/* When Joyride is active, ensure the target LI is visually correct for spotlighting */
-body.react-joyride__body--open #sidebar-nav-leads {
-  z-index: 10001 !important; /* This ensures it's above the tooltip if tooltip is at 10000 */
-  position: relative !important; 
-  background-color: hsl(var(--sidebar-background)) !important; /* Ensure opacity */
-  /* pointer-events are not needed here if custom clickable overlay is used */
-}
-
-body.react-joyride__body--open #sidebar-nav-leads > a {
-  position: relative !important;
-  z-index: 10002 !important; 
-  background-color: transparent !important; 
-  display: block !important;
-   /* pointer-events are not needed here if custom clickable overlay is used */
-}
-    
