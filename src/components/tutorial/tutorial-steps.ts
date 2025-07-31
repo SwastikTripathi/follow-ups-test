@@ -7,7 +7,7 @@ const createStepText = (title: string, mainText: string) => {
     return `<h3 class="font-headline text-lg font-semibold text-foreground">${title}</h3><p class="text-sm text-muted-foreground">${mainText}</p>`;
 };
 
-export const steps: Step[] = [
+export const steps: any[] = [
   {
     id: 'intro',
     options: {
