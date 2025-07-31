@@ -1,7 +1,6 @@
 
 'use client';
 
-import { Shepherd } from 'react-shepherd';
 import { type Step } from 'react-shepherd';
 
 const createStepText = (mainText: string) => {
@@ -105,7 +104,7 @@ export const steps: Step[] = [
   {
     id: 'summary-step',
     title: 'You\'re All Set!',
-    text: createStepText("You're ready to rock! From here you can:<ul class='list-disc pl-5 mt-2 space-y-1'><li>Track all your job applications and sales leads. ✅</li><li>Manage your contacts and companies. 📇</li><li>Build and host a public resume page from settings. 🌐</li></ul>"),
+    text: createStepText("You're ready to rock! From here you can:<ul><li class='mt-2'>✅ Track all your job applications and sales leads.</li><li class='mt-1'>📇 Manage your contacts and companies.</li><li class='mt-1'>🌐 Build and host a public resume page from settings.</li></ul>"),
     buttons: [
       {
         classes: 'shepherd-button-secondary',
@@ -122,7 +121,7 @@ export const steps: Step[] = [
    {
     id: 'final-leads-step',
     attachTo: { element: '#sidebar-nav-leads', on: 'right' },
-    canClickTarget: false, // Make it unclickable
+    canClickTarget: false, 
     buttons: [
        {
         classes: 'shepherd-button-secondary',
@@ -132,7 +131,7 @@ export const steps: Step[] = [
       {
         classes: 'shepherd-button-primary',
         text: 'Finish',
-        type: 'next', // 'next' will complete the tour on the last step
+        type: 'next', 
       },
     ],
     title: 'Manage Your Leads',
