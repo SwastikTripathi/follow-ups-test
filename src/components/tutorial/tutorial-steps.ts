@@ -1,7 +1,6 @@
 
 'use client';
 
-import { Shepherd } from 'react-shepherd';
 import { type Step } from 'react-shepherd';
 
 const createStepText = (mainText: string) => {
