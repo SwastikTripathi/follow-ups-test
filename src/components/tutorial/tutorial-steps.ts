@@ -14,7 +14,7 @@ const createStepText = (title: string, mainText: string) => {
     `;
 };
 
-export const steps: Step[] = [
+export const steps: any[] = [
   {
     id: 'intro',
     text: createStepText("Welcome to FollowUps!", "Tired of being Ghosted? 👻 Let's take care of that"),
