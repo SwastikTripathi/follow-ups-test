@@ -25,9 +25,9 @@ export default function PrivacyPolicyPage() {
           <Card className="shadow-lg">
             <CardContent className="prose prose-sm dark:prose-invert max-w-none py-8 px-6 md:px-8 space-y-6">
               <p><strong>Effective Date:</strong> {staticDate}<br />
-              <strong>Last Updated:</strong> August 1, 2025 IST</p>
+              <strong>Last Updated:</strong> July 6, 2025 IST</p>
 
-              <p>Welcome to <strong>FollowUps</strong>. Your privacy is important to us. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our service, including through our primary website at <a href="https://followups.tech">followups.tech</a>, our alternate domains (like <a href="https://followups-tech.vercel.app">followups-tech.vercel.app</a>), and related services ("Service"). Please read this policy carefully to understand your rights and our obligations under applicable privacy laws.</p>
+              <p>Welcome to <strong>FollowUps</strong>. Your privacy is important to us. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our service, including through our web application, <a href="https://followups-tech.vercel.app/">https://followups-tech.vercel.app/</a>, and related services ("Service"). Please read this policy carefully to understand your rights and our obligations under applicable privacy laws.</p>
 
               <h2>1. Who We Are</h2>
               <p>This Privacy Policy is issued by <strong>FollowUps</strong> ("FollowUps", "we", "our", or "us"). We are the data controller for your personal data, except where we act on behalf of a third party.</p>
@@ -52,15 +52,13 @@ export default function PrivacyPolicyPage() {
                 <li><strong>User Profile Settings:</strong> Display name, role, age range, country, annual income (optional), income currency, usage preferences, email cadence settings.</li>
                 <li><strong>Prospecting Data You Enter:</strong>
                   <ul>
-                    <li><strong>Leads/Job Openings:</strong> Company name, role title, notes, job URL, initial outreach date.</li>
+                    <li><strong>Job Openings:</strong> Company name, role title, notes, job URL, initial outreach date.</li>
                     <li><strong>Contacts:</strong> Name, title, email, phone number, LinkedIn URL, notes, and tags.</li>
                     <li><strong>Follow-Ups:</strong> Status, follow-up dates, email subjects and bodies.</li>
                     <li><strong>Email Templates:</strong> Subjects, bodies, and signatures you write or save.</li>
                   </ul>
                 </li>
                 <li><strong>Payment Information (via Razorpay):</strong> We collect order ID, payment ID, and subscription metadata. Credit card numbers are <strong>not stored</strong> by us.</li>
-                 <li><strong>Your Gemini API Key:</strong> To use our AI features, you must provide your own Google Gemini API key. This key is stored **exclusively in your browser's local storage**. It is **never** sent to our servers, and we cannot access it.</li>
-                 <li><strong>Resume & Portfolio Data:</strong> You may voluntarily provide detailed resume and portfolio information, including your work experience, education, skills, projects, and images. This data is used to personalize AI-generated content.</li>
               </ul>
 
               <h3>b. Information We Collect Automatically</h3>
@@ -71,16 +69,15 @@ export default function PrivacyPolicyPage() {
                     <li>Session management (via Supabase Auth)</li>
                     <li>Theme preference (light/dark mode)</li>
                     <li>Onboarding tutorial progress</li>
-                    <li>Your Gemini API Key (stored only on your device)</li>
                   </ul>
                 </li>
-                <li><strong>AI Usage Count:</strong> We track the number of times you use an AI generation feature to enforce plan limits, but we do not store the content of your prompts or the generated responses.</li>
               </ul>
 
               <h3>c. Information from Third Parties</h3>
               <ul>
                 <li><strong>Google OAuth:</strong> If you sign in using Google, we receive basic profile information.</li>
                 <li><strong>Razorpay:</strong> For payment processing.</li>
+                <li><strong>AI Services:</strong> Text processed through Genkit and Google AI for email suggestions, only when used.</li>
               </ul>
 
               <h2>4. How We Use Your Information</h2>
@@ -91,7 +88,6 @@ export default function PrivacyPolicyPage() {
                 <li>To process payments and subscriptions.</li>
                 <li>To communicate service-related updates, notifications, and support responses.</li>
                 <li>To personalize your experience and follow-up workflows.</li>
-                <li>To provide AI-powered features, such as generating email drafts, by sending relevant context (like job descriptions and resume data) from your browser to the Google Gemini API using your locally-stored API key.</li>
                 <li>To analyze usage and improve product functionality.</li>
                 <li>To ensure data security, prevent fraud, and comply with legal obligations.</li>
                 <li>With your consent, to send optional marketing communications (opt-out anytime).</li>
@@ -114,9 +110,9 @@ export default function PrivacyPolicyPage() {
                   <ul>
                     <li>Supabase (data storage, authentication)</li>
                     <li>Razorpay (payment processing)</li>
+                    <li>Google AI / Genkit (optional AI processing)</li>
                   </ul>
                 </li>
-                 <li><strong>Google (via AI Features):</strong> When you use an AI feature, your prompt data (e.g., job description, resume context) and your API key are sent directly from your browser to the Google Gemini API. We do not act as an intermediary for this data transfer.</li>
                 <li><strong>Legal Compliance:</strong> If required by law or government request.</li>
                 <li><strong>Business Transfers:</strong> In the event of a merger, acquisition, or asset sale.</li>
                 <li><strong>With Your Consent:</strong> In cases where we ask for explicit permission.</li>
@@ -177,9 +173,9 @@ export default function PrivacyPolicyPage() {
               <p>We use:</p>
               <ul>
                 <li><strong>Essential Cookies:</strong> For authentication and performance (e.g., Supabase session cookies)</li>
-                <li><strong>LocalStorage:</strong> To save onboarding state, theme preference, and your Gemini API Key.</li>
+                <li><strong>LocalStorage:</strong> To save onboarding state and theme preference</li>
               </ul>
-              <p>For more details, please see our <Link href="/cookie-policy" className="text-primary hover:underline">Cookie Policy</Link>.</p>
+              <p>If we introduce analytics or non-essential cookies in the future, we will implement a <strong>cookie consent mechanism</strong> for applicable regions (e.g., EU/UK).</p>
 
               <h2>12. Data Security</h2>
               <p>We employ industry-standard security measures including:</p>

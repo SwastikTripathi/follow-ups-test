@@ -25,43 +25,47 @@ export default function CookiePolicyPage() {
           <Card className="shadow-lg">
             <CardContent className="prose prose-sm dark:prose-invert max-w-none py-8 px-6 md:px-8 space-y-6">
               <p><strong>Effective Date:</strong> {staticDate}<br />
-              <strong>Last Updated:</strong> August 1, 2025 IST</p>
+              <strong>Last Updated:</strong> July 6, 2025 IST</p>
 
               <h2>1. Introduction</h2>
-              <p>Welcome to <strong>FollowUps</strong> ("we", "us", or "our"). This Cookie Policy explains how we use cookies and similar technologies when you visit our primary website at <a href="https://followups.tech">followups.tech</a> or use any of our related services ("Service").</p>
+              <p>Welcome to <strong>FollowUps</strong> ("we", "us", or "our"). This Cookie Policy explains how we use cookies and similar technologies when you visit <a href="https://followups-tech.vercel.app/">https://followups-tech.vercel.app/</a> or use any of our related services ("Service").</p>
               <p>This policy works alongside our <Link href="/privacy-policy">Privacy Policy</Link>, which details how we handle personal data.</p>
-              <p>By using our Service, you agree to the use of essential cookies and local storage as outlined here. If we introduce non-essential cookies (e.g., for analytics or advertising), we will ask for your explicit consent via a cookie banner.</p>
+              <p>By using our Service, you agree to the use of essential cookies as outlined here. If we introduce non-essential cookies (e.g., advertising), we will ask for your explicit consent via a cookie banner.</p>
 
-              <h2>2. What Are Cookies & Similar Technologies?</h2>
+              <h2>2. What Are Cookies?</h2>
               <p>Cookies are small text files placed on your device when you visit a website. They allow the site to function properly, remember your preferences, and enhance your experience.</p>
-              <p>We also use technologies like <strong>localStorage</strong> to store data directly in your browser. Unlike cookies, this data is not sent to our servers with every request.</p>
+              <p>We also use technologies similar to cookies, including:</p>
+              <ul>
+                <li><strong>localStorage</strong> – For storing preferences (e.g., theme, onboarding status)</li>
+                <li><strong>SessionStorage</strong></li>
+                <li><strong>Pixels and Web Beacons</strong> (not currently used but may be introduced in the future)</li>
+              </ul>
 
               <h2>3. How We Use Cookies and Similar Technologies</h2>
               <h3>a. Strictly Necessary (Essential)</h3>
-              <p>These are vital for our service to function:</p>
+              <p>These cookies are vital for our service to function:</p>
               <ul>
-                <li><strong>Authentication (Supabase):</strong> Supabase uses cookies (e.g., <code>sb-access-token</code>, <code>sb-refresh-token</code>) to store tokens that keep you logged in and manage your session securely.</li>
-                <li><strong>Payments (Razorpay):</strong> Our payment processor uses cookies for fraud detection and to ensure smooth transaction processing.</li>
-                <li><strong>Google Sign-In:</strong> If you use Google to sign in, Google places cookies to manage your authentication session.</li>
+                <li><strong>Authentication (Supabase)</strong> – Stores tokens to log you in and manage sessions (<code>sb-access-token</code>, <code>sb-refresh-token</code>)</li>
+                <li><strong>Payments (Razorpay)</strong> – Uses cookies for fraud detection and transaction processing</li>
               </ul>
-              
+
               <h3>b. Functionality (localStorage)</h3>
-              <p>We use your browser's localStorage to improve your experience. This data stays on your device and is not sent to us:</p>
+              <p>Used to improve user experience:</p>
               <ul>
-                <li><code>theme</code> – Stores your light/dark mode preference.</li>
-                <li><code>onboardingCompleted</code> – Tracks if you've completed the welcome tutorial.</li>
-                <li><code>followups-gemini-api-key</code> – Securely stores your Google Gemini API key **only on your device**. We never see or have access to this key.</li>
-                <li><code>followups-selected-currency</code> - Stores your preferred currency (USD or INR) for viewing pricing.</li>
-                <li><code>prospectflow-cached-user-data</code> & <code>prospectflow-last-full-data-fetch</code> - Temporarily caches your data to make the app load faster for you.</li>
+                <li><code>theme</code> – stores your light/dark mode preference</li>
+                <li><code>onboardingCompleted</code> – tracks tutorial completion</li>
               </ul>
               <p>These items are stored persistently in your browser and do not expire unless manually cleared.</p>
 
               <h3>c. Performance / Analytics</h3>
               <p>We use <strong>Counter.dev</strong>, a privacy-focused, cookieless analytics service, to understand general website traffic and improve our Service. This service does not track individual users or use cookies. We do not currently use other analytics services like Google Analytics.</p>
+              <p>If that changes, you will receive a cookie banner and choice to consent or decline.</p>
+              <p>Supabase <strong>may</strong> collect anonymized metadata for service reliability, in line with their policies.</p>
 
               <h3>d. Advertising / Targeting</h3>
-              <p>We do <strong>not</strong> use any advertising or tracking cookies. If this changes in the future, we will ask for your consent first.</p>
-              
+              <p>We do <strong>not</strong> use any advertising or tracking cookies.</p>
+              <p>If introduced in the future, we will notify users and update this policy</p>
+
               <h2>4. Cookie & Storage Types</h2>
               <div className="overflow-x-auto">
                 <table>
@@ -78,11 +82,11 @@ export default function CookiePolicyPage() {
                     </tr>
                     <tr>
                       <td><strong>Persistent Cookies/Storage</strong></td>
-                      <td>Remain on your device until you delete them. Used for preferences, API keys, etc.</td>
+                      <td>Remain on your device until you delete them. Used for preferences, etc.</td>
                     </tr>
                     <tr>
                       <td><strong>First-Party Cookies</strong></td>
-                      <td>Set by <code>followups.tech</code> (e.g., Supabase auth).</td>
+                      <td>Set by <code>https://followups-tech.vercel.app/</code> (e.g., Supabase auth, localStorage data).</td>
                     </tr>
                     <tr>
                       <td><strong>Third-Party Cookies</strong></td>
@@ -92,26 +96,105 @@ export default function CookiePolicyPage() {
                 </table>
               </div>
 
-
-              <h2>5. Managing Your Data</h2>
+              <h2>5. Managing Cookies and Preferences</h2>
               <h3>a. Browser Controls</h3>
-              <p>You can manage cookies and clear site data (including localStorage) through your browser settings:</p>
+              <p>You can manage cookies through your browser settings:</p>
               <ul>
                 <li><a href="https://support.google.com/chrome/answer/95647" target="_blank" rel="noopener noreferrer">Chrome</a></li>
                 <li><a href="https://support.mozilla.org/en-US/kb/cookies-information-websites-store-on-your-computer" target="_blank" rel="noopener noreferrer">Firefox</a></li>
                 <li><a href="https://support.apple.com/en-us/HT201265" target="_blank" rel="noopener noreferrer">Safari</a></li>
                 <li><a href="https://support.microsoft.com/en-us/help/4027947" target="_blank" rel="noopener noreferrer">Edge</a></li>
               </ul>
-              <p>Note: Disabling essential cookies or clearing localStorage may prevent you from logging in, break AI features, or reset your preferences.</p>
-              
-              <h3>b. Do Not Track (DNT)</h3>
-              <p>We do not currently respond to “Do Not Track” signals, as no consistent industry standard exists. However, we limit tracking by default by using privacy-focused analytics and avoiding advertising cookies.</p>
+              <p>Note: Disabling essential cookies may prevent you from logging in or using core features.</p>
 
-              <h2>6. Changes to This Policy</h2>
-              <p>We may update this policy if we introduce new features or technologies. Any changes will be reflected in the "Last Updated" date at the top of this page.</p>
+              <h3>b. Managing localStorage</h3>
+              <p>Clear <code>localStorage</code> from your browser settings to reset theme or onboarding preferences.</p>
 
-              <h2>7. Contact Information</h2>
-              <p>If you have questions or concerns about this Cookie Policy, please contact us at <a href="mailto:followups.contact@gmail.com">followups.contact@gmail.com</a>.</p>
+              <h3>c. Consent Mechanism (Planned)</h3>
+              <p>We will implement a cookie consent banner for users in applicable jurisdictions (EU, UK, etc.) when non-essential cookies are introduced. You will be able to:</p>
+              <ul>
+                <li>Accept all cookies</li>
+                <li>Reject all non-essential cookies</li>
+                <li>Customize preferences</li>
+              </ul>
+
+              <h3>d. Do Not Track (DNT)</h3>
+              <p>We currently do <strong>not</strong> respond to “Do Not Track” signals, as no consistent industry standard exists to our knowledge. However, we continue to monitor this for future compliance.</p>
+
+              <h2>6. Cross-Border Data Transfers</h2>
+              <p>Some data may be stored or processed outside your home country (e.g., by Supabase in the U.S. or EU). We implement safeguards such as:</p>
+              <ul>
+                <li><strong>Standard Contractual Clauses (SCCs)</strong> under GDPR</li>
+                <li><strong>Data Processing Agreements (DPAs)</strong> with third-party vendors</li>
+                <li><strong>End-to-end encryption</strong> and <strong>access controls</strong> for secure transmission</li>
+              </ul>
+
+              <h2>7. Cookie Retention Periods</h2>
+              <div className="overflow-x-auto">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Technology</th>
+                      <th>Retention</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>Supabase Cookies</td>
+                      <td>Session or until logout</td>
+                    </tr>
+                    <tr>
+                      <td>localStorage Items</td>
+                      <td>Persistent until manually cleared</td>
+                    </tr>
+                    <tr>
+                      <td>Razorpay Cookies</td>
+                      <td>As per Razorpay’s fraud prevention policy</td>
+                    </tr>
+                    <tr>
+                      <td>Google OAuth</td>
+                      <td>Per Google’s privacy policy</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <p>You may manually clear all cookies and storage from your browser settings.</p>
+
+              <h2>8. Children’s Privacy</h2>
+              <p>FollowUps is not designed for users under the age of 18. We do not knowingly place cookies for children or collect their data. If we learn that we have, we will delete that information promptly to comply with <strong>COPPA</strong> (US), <strong>GDPR</strong>, and other child protection laws.</p>
+
+              <h2>9. Accessibility</h2>
+              <p>We are committed to ensuring our cookie consent tools (if used in future) are accessible, including for users who rely on:</p>
+              <ul>
+                <li>Screen readers</li>
+                <li>Keyboard navigation</li>
+                <li>Color contrast enhancements</li>
+              </ul>
+
+              <h2>10. Compliance with Global Laws</h2>
+              <p>We aim to comply with the following major regulations:</p>
+              <ul>
+                <li><strong>GDPR</strong> (EU/EEA)</li>
+                <li><strong>ePrivacy Directive</strong> (EU)</li>
+                <li><strong>CCPA/CPRA</strong> (California, USA)</li>
+                <li><strong>DPDPA</strong> (India)</li>
+                <li><strong>LGPD</strong> (Brazil)</li>
+                <li><strong>UK GDPR</strong></li>
+              </ul>
+              <p>You can request access, correction, or deletion of data linked to cookie usage by contacting us (see below).</p>
+
+              <h2>11. Contact Information</h2>
+              <p>📧 Email: <a href="mailto:followups.contact@gmail.com">followups.contact@gmail.com</a></p>
+              <p>For users in India, this email serves as our grievance contact under the <strong>Digital Personal Data Protection Act (DPDPA)</strong>.</p>
+              <p>We may appoint a <strong>Data Protection Officer (DPO)</strong> in the future if required by scale or law.</p>
+
+              <h2>12. Changes to This Policy</h2>
+              <p>We may update this policy when introducing new cookies or due to legal changes.</p>
+              <ul>
+                <li><strong>Last Updated</strong> date will reflect the latest version.</li>
+                <li><strong>Material changes</strong> may be communicated via email or app notice.</li>
+              </ul>
+              <p>If you have questions or concerns about this Cookie Policy, don’t hesitate to reach out to us at <a href="mailto:followups.contact@gmail.com">followups.contact@gmail.com</a>.</p>
             </CardContent>
           </Card>
         </div>

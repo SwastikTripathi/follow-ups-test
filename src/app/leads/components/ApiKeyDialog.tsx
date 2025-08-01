@@ -60,7 +60,7 @@ export function ApiKeyDialog({ isOpen, onOpenChange, onApiKeySubmit }: ApiKeyDia
             <h4 className="font-semibold text-sm">How to get your key:</h4>
             <ol className="list-decimal list-inside text-sm text-muted-foreground space-y-1">
               <li>Go to <Link href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline font-semibold">Google AI Studio <ExternalLink className="inline-block h-3 w-3 ml-0.5" /></Link>.</li>
-              <li>Click "Create API key".</li>
+              <li>Click "Create API key in new project".</li>
               <li>Copy the generated key and paste it below.</li>
             </ol>
           </div>

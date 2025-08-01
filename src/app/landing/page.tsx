@@ -312,23 +312,6 @@ const AnimatedWordsSection = () => {
   );
 };
 
-const PeerPushBadge = () => (
-  <a 
-    href="https://peerpush.net/p/followups" 
-    target="_blank" 
-    rel="noopener noreferrer" 
-    style={{height: '60px'}}
-    className="group block"
-  >
-    <img 
-      src="https://peerpush.net/p/followups/badge" 
-      alt="FollowUps badge" 
-      style={{height: '60px'}}
-      className="transition-opacity duration-300 group-hover:opacity-100 group-focus:opacity-100"
-    />
-  </a>
-);
-
 export default function LandingPage() {
 
   return (
@@ -337,7 +320,7 @@ export default function LandingPage() {
 
       <main className="flex-1">
         {/* Hero Section */}
-        <section className="py-20 md:py-28 text-center bg-background relative">
+        <section className="py-20 md:py-28 text-center bg-background">
           <div className="container mx-auto px-[10vw]">
             <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold tracking-tighter mb-6 font-headline text-foreground">
               Stop losing leads and<br className="hidden sm:inline" /> missing <span className="text-primary">follow-ups</span>.
@@ -386,10 +369,6 @@ export default function LandingPage() {
                 </video>
               </div>
             </div>
-          </div>
-           {/* Badge for Desktop (sticky to section) and Mobile (static in flow) */}
-          <div className="md:sticky md:bottom-4 md:left-4 md:z-10 mt-8 md:mt-0 flex justify-center md:justify-start md:w-fit opacity-60 hover:opacity-100 focus-within:opacity-100 transition-opacity duration-300">
-             <PeerPushBadge />
           </div>
         </section>
 
@@ -704,7 +683,6 @@ export default function LandingPage() {
           </div>
         </section>
       </main>
-
       <PublicFooter />
     </div>
   );
