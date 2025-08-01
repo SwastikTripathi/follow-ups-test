@@ -182,7 +182,7 @@ function HeroVisual() {
                               data-ai-hint={card.dataAiHint}
                             />
                             <div className="flex-grow min-w-0 text-left">
-                              <h4 className="text-sm font-semibold text-card-foreground truncate leading-tight">{card.title}</h4>
+                              <h4 className="text-sm font-semibold text-card-foreground leading-snug">{card.title}</h4>
                               {card.contextLine && (
                                 <p className="text-xs text-muted-foreground truncate -mt-1">{card.contextLine}</p>
                               )}
@@ -379,6 +379,17 @@ export default function LandingPage() {
         <section id="streamline-section" className="py-16 md:py-24 bg-background">
           <div className="container mx-auto px-[10vw]">
             <div className="text-left max-w-3xl mx-auto md:mx-0 mb-12 md:mb-16">
+              <div className="mb-4">
+                <a
+                  href="https://peerpush.net/p/followups"
+                  target="_blank"
+                  rel="noopener"
+                  style={{ height: '60px', borderRadius: '3em' }}
+                  className="inline-block transition-all duration-300 ease-in-out hover:shadow-[0_0_15px_hsl(var(--primary)/0.5)]"
+                >
+                  <img src="https://peerpush.net/p/followups/badge" alt="FollowUps badge" style={{ height: '60px' }} />
+                </a>
+              </div>
               <h2 className="text-3xl md:text-4xl font-bold tracking-tight font-headline text-foreground">
                 Why Professionals choose FollowUps
               </h2>
